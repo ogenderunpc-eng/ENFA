@@ -37,13 +37,6 @@ export default function Layout({ children, role, onSwitchRole, activeTab, setAct
             </div>
             <h1 className="text-xl font-bold text-primary tracking-tight">Aeon Academy</h1>
           </div>
-          <button 
-            onClick={onSwitchRole}
-            className="bg-secondary-container text-on-secondary-container px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90 active:scale-95 flex items-center gap-2"
-          >
-            <ArrowLeftRight size={16} />
-            {role === 'teacher' ? 'Veli Görünümü' : 'Öğretmen Görünümü'}
-          </button>
         </div>
       </header>
 

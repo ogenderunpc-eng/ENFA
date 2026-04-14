@@ -34,12 +34,19 @@ export interface GradeUpdate {
   average: number;
 }
 
+export interface Grade {
+  subject: string;
+  value: number;
+  date: string;
+}
+
 export interface Student {
   id: string;
   name: string;
   number: string;
   avatar: string;
   status?: 'present' | 'absent' | 'late';
+  grades?: Grade[];
 }
 
 export interface TeacherComment {

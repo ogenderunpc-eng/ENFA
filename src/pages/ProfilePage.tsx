@@ -7,9 +7,10 @@ import { Role } from '../types';
 interface ProfilePageProps {
   role: Role;
   userAvatar: string;
+  onLogout: () => void;
 }
 
-export default function ProfilePage({ role, userAvatar }: ProfilePageProps) {
+export default function ProfilePage({ role, userAvatar, onLogout }: ProfilePageProps) {
   const menuItems = [
     { icon: Shield, label: 'Güvenlik ve Gizlilik', color: 'text-blue-500' },
     { icon: Bell, label: 'Bildirim Ayarları', color: 'text-orange-500' },
@@ -114,7 +115,10 @@ export default function ProfilePage({ role, userAvatar }: ProfilePageProps) {
       </section>
 
       {/* Logout */}
-      <button className="w-full py-4 flex items-center justify-center gap-2 text-error font-bold hover:bg-error/5 rounded-2xl transition-colors">
+      <button 
+        onClick={onLogout}
+        className="w-full py-4 flex items-center justify-center gap-2 text-error font-bold hover:bg-error/5 rounded-2xl transition-colors"
+      >
         <LogOut size={20} />
         Oturumu Kapat
       </button>

@@ -4,6 +4,14 @@ import { motion } from 'motion/react';
 import { GRADE_UPDATES, TEACHER_COMMENTS } from '../constants';
 
 export default function ParentDashboard() {
+  const [chartData] = React.useState(() => [
+    { label: 'MAT', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
+    { label: 'FİZ', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
+    { label: 'KİM', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
+    { label: 'EDEB', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
+    { label: 'TAR', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
+  ]);
+
   return (
     <div className="space-y-10">
       <motion.section
@@ -87,13 +95,7 @@ export default function ParentDashboard() {
           </div>
           
           <div className="h-64 flex items-end justify-between gap-4 px-4">
-            {[
-              { label: 'MAT', ali: 85, sinif: 60 },
-              { label: 'FİZ', ali: 90, sinif: 70 },
-              { label: 'KİM', ali: 65, sinif: 55 },
-              { label: 'EDEB', ali: 82, sinif: 80 },
-              { label: 'TAR', ali: 75, sinif: 65 },
-            ].map((data, i) => (
+            {chartData.map((data, i) => (
               <div key={data.label} className="flex-1 flex flex-col items-center gap-2">
                 <div className="w-full flex items-end justify-center gap-1 h-full">
                   <motion.div 

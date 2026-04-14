@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
-import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { RECENT_MESSAGES, CLASSES as INITIAL_CLASSES } from '../constants';
+import { RECENT_MESSAGES } from '../constants';
 import { ClassSession } from '../types';
 
-export default function TeacherDashboard() {
-  const [classes, setClasses] = useState<ClassSession[]>(INITIAL_CLASSES);
+interface TeacherDashboardProps {
+  classes: ClassSession[];
+  setClasses: (classes: ClassSession[] | ((prev: ClassSession[]) => ClassSession[])) => void;
+}
+
+export default function TeacherDashboard({ classes, setClasses }: TeacherDashboardProps) {
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [newClass, setNewClass] = useState({ title: '', time: '', location: '', classGroup: '' });
+  const [isRinging, setIsRinging] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const nextClass = classes.find(c => c.status === 'next') || classes[0];
+
+  const handleRingBell = () => {
+    if (isRinging) return;
+    
+    setIsRinging(true);
+    if (!audioRef.current) {
+      audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    }
+    audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+    
+    setTimeout(() => {
+      setIsRinging(false);
+    }, 3000);
+  };
 
   const handleAddClass = (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,8 +200,21 @@ export default function TeacherDashboard() {
                   <FileText size={20} />
                   Ders Planını Aç
                 </button>
-                <button className="bg-transparent border border-white/30 text-white px-6 py-3 rounded-xl font-bold hover:bg-white/10 transition-all">
-                  Öğrenci Listesi
+                <button 
+                  onClick={handleRingBell}
+                  className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${
+                    isRinging 
+                      ? 'bg-secondary text-white scale-105 shadow-lg shadow-secondary/40' 
+                      : 'bg-white/10 border border-white/30 text-white hover:bg-white/20'
+                  }`}
+                >
+                  <motion.div
+                    animate={isRinging ? { rotate: [0, -20, 20, -20, 20, 0] } : {}}
+                    transition={{ repeat: isRinging ? Infinity : 0, duration: 0.5 }}
+                  >
+                    {isRinging ? <BellRing size={20} /> : <Bell size={20} />}
+                  </motion.div>
+                  {isRinging ? 'Zil Çalıyor...' : 'Ders Zilini Çal'}
                 </button>
               </div>
             </div>

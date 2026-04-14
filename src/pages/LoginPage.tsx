@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GraduationCap, Users, ArrowRight, Sparkles, HelpCircle } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Role } from '../types';
 
 interface LoginPageProps {
@@ -8,7 +8,13 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
+  const [view, setView] = useState<'selection' | 'login'>('selection');
   const [selectedRole, setSelectedRole] = useState<Role>('teacher');
+
+  const handleRoleSelect = (role: Role) => {
+    setSelectedRole(role);
+    setView('login');
+  };
 
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center">
@@ -16,7 +22,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-0 bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_12px_40px_rgba(0,30,64,0.06)] w-full"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-0 bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_12px_40px_rgba(0,30,64,0.06)] w-full max-w-5xl"
         >
           {/* Left Side: Visual & Branding */}
           <div className="lg:col-span-5 bg-login-gradient relative p-12 flex flex-col justify-between text-white">
@@ -50,97 +56,111 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
           {/* Right Side: Interaction & Form */}
           <div className="lg:col-span-7 p-8 md:p-16 flex flex-col justify-center">
-            <div className="max-w-md mx-auto w-full">
-              <header className="mb-10">
-                <h2 className="font-headline text-4xl font-bold text-primary mb-2 tracking-tight">Hoş Geldiniz</h2>
-                <p className="text-on-surface-variant">Devam etmek için lütfen sistemdeki rolünüzü seçin.</p>
-              </header>
-
-              {/* Role Selection */}
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <button 
-                  onClick={() => setSelectedRole('teacher')}
-                  className={`group flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all relative overflow-hidden ${
-                    selectedRole === 'teacher' 
-                      ? 'border-primary bg-surface-container-low' 
-                      : 'border-transparent bg-surface-container-low hover:bg-surface-container-high'
-                  }`}
+            <AnimatePresence mode="wait">
+              {view === 'selection' ? (
+                <motion.div 
+                  key="selection"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="w-full"
                 >
-                  <GraduationCap className={`mb-3 ${selectedRole === 'teacher' ? 'text-primary' : 'text-on-surface-variant'}`} size={32} />
-                  <span className={`font-headline font-bold text-sm ${selectedRole === 'teacher' ? 'text-primary' : 'text-on-surface-variant'}`}>Öğretmen</span>
-                  {selectedRole === 'teacher' && (
-                    <motion.div layoutId="check" className="absolute top-2 right-2">
-                      <div className="w-5 h-5 bg-secondary rounded-full flex items-center justify-center">
-                        <div className="w-2 h-2 bg-white rounded-full" />
+                  <header className="mb-10">
+                    <h2 className="font-headline text-4xl font-bold text-primary mb-2 tracking-tight">Giriş Yapın</h2>
+                    <p className="text-on-surface-variant">Lütfen devam etmek için giriş türünüzü seçin.</p>
+                  </header>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <button 
+                      onClick={() => handleRoleSelect('teacher')}
+                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-primary hover:bg-surface-container-high transition-all text-left"
+                    >
+                      <div className="w-16 h-16 rounded-xl bg-primary text-white flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
+                        <GraduationCap size={32} />
                       </div>
-                    </motion.div>
-                  )}
-                </button>
-
-                <button 
-                  onClick={() => setSelectedRole('parent')}
-                  className={`group flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all relative overflow-hidden ${
-                    selectedRole === 'parent' 
-                      ? 'border-primary bg-surface-container-low' 
-                      : 'border-transparent bg-surface-container-low hover:bg-surface-container-high'
-                  }`}
-                >
-                  <Users className={`mb-3 ${selectedRole === 'parent' ? 'text-primary' : 'text-on-surface-variant'}`} size={32} />
-                  <span className={`font-headline font-bold text-sm ${selectedRole === 'parent' ? 'text-primary' : 'text-on-surface-variant'}`}>Veli</span>
-                  {selectedRole === 'parent' && (
-                    <motion.div layoutId="check" className="absolute top-2 right-2">
-                      <div className="w-5 h-5 bg-secondary rounded-full flex items-center justify-center">
-                        <div className="w-2 h-2 bg-white rounded-full" />
+                      <div>
+                        <h4 className="font-headline font-bold text-primary text-xl">Öğretmen Girişi</h4>
+                        <p className="text-sm text-on-surface-variant">Ders yönetimi ve yoklama paneli</p>
                       </div>
-                    </motion.div>
-                  )}
-                </button>
-              </div>
+                      <ArrowRight className="ml-auto text-outline group-hover:text-primary group-hover:translate-x-1 transition-all" size={24} />
+                    </button>
 
-              {/* Form */}
-              <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); onLogin(selectedRole); }}>
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-primary uppercase tracking-wider ml-1">E-Posta Adresi</label>
-                  <input 
-                    className="w-full bg-surface-container-high border-none rounded-t-sm focus:ring-2 focus:ring-primary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
-                    type="email" 
-                    placeholder="ornek@aeonacademy.com"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="block text-xs font-bold text-primary uppercase tracking-wider">Parola</label>
-                    <button type="button" className="text-xs font-medium text-secondary hover:underline">Şifremi Unuttum</button>
+                    <button 
+                      onClick={() => handleRoleSelect('parent')}
+                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-surface-container-high transition-all text-left"
+                    >
+                      <div className="w-16 h-16 rounded-xl bg-secondary text-white flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
+                        <Users size={32} />
+                      </div>
+                      <div>
+                        <h4 className="font-headline font-bold text-primary text-xl">Veli Girişi</h4>
+                        <p className="text-sm text-on-surface-variant">Öğrenci takibi ve performans raporları</p>
+                      </div>
+                      <ArrowRight className="ml-auto text-outline group-hover:text-secondary group-hover:translate-x-1 transition-all" size={24} />
+                    </button>
                   </div>
-                  <input 
-                    className="w-full bg-surface-container-high border-none rounded-t-sm focus:ring-2 focus:ring-primary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
-                    type="password" 
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-
-                <div className="flex items-center space-x-3 py-2">
-                  <input className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox" id="remember" />
-                  <label className="text-sm text-on-surface-variant cursor-pointer" htmlFor="remember">Beni hatırla</label>
-                </div>
-
-                <div className="flex flex-col gap-3 pt-4">
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="login"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="w-full"
+                >
                   <button 
-                    className="w-full bg-login-gradient text-white font-headline font-bold py-4 rounded-md shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2" 
-                    type="submit"
+                    onClick={() => setView('selection')}
+                    className="flex items-center gap-2 text-sm font-bold text-secondary mb-8 hover:underline"
                   >
-                    Panele Giriş Yap
-                    <ArrowRight size={18} />
+                    <ArrowRight className="rotate-180" size={16} />
+                    Geri Dön
                   </button>
-                  <p className="text-center text-xs text-on-surface-variant mt-4">
-                    Kaydınız yok mu? <button type="button" className="text-primary font-bold hover:underline">Kurumsal İletişim</button>
-                  </p>
-                </div>
-              </form>
-            </div>
+
+                  <header className="mb-10">
+                    <h2 className="font-headline text-4xl font-bold text-primary mb-2 tracking-tight">
+                      {selectedRole === 'teacher' ? 'Öğretmen Girişi' : 'Veli Girişi'}
+                    </h2>
+                    <p className="text-on-surface-variant">Lütfen kimlik bilgilerinizle giriş yapın.</p>
+                  </header>
+
+                  {/* Form */}
+                  <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); onLogin(selectedRole); }}>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-primary uppercase tracking-wider ml-1">E-Posta Adresi</label>
+                      <input 
+                        className="w-full bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-primary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
+                        type="email" 
+                        placeholder={selectedRole === 'teacher' ? 'ogretmen@aeonacademy.com' : 'veli@aeonacademy.com'}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="block text-xs font-bold text-primary uppercase tracking-wider">Parola</label>
+                        <button type="button" className="text-xs font-medium text-secondary hover:underline">Şifremi Unuttum</button>
+                      </div>
+                      <input 
+                        className="w-full bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-primary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
+                        type="password" 
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-3 pt-4">
+                      <button 
+                        className={`w-full ${selectedRole === 'teacher' ? 'bg-primary' : 'bg-secondary'} text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2`} 
+                        type="submit"
+                      >
+                        Sisteme Giriş Yap
+                        <ArrowRight size={18} />
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       </main>

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Role } from './types';
+import React, { useState, useEffect } from 'react';
+import { Role, Student, ClassSession } from './types';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import TeacherDashboard from './pages/TeacherDashboard';
@@ -13,15 +13,25 @@ import SchedulePage from './pages/SchedulePage';
 import MessagesPage from './pages/MessagesPage';
 import ProfilePage from './pages/ProfilePage';
 import PortalPage from './pages/PortalPage';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { STUDENTS as INITIAL_STUDENTS, CLASSES as INITIAL_CLASSES } from './constants';
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState<Role>('teacher');
+  const [isLoggedIn, setIsLoggedIn] = useLocalStorage('isLoggedIn', false);
+  const [role, setRole] = useLocalStorage<Role>('role', 'teacher');
   const [activeTab, setActiveTab] = useState('home');
+  
+  const [students, setStudents] = useLocalStorage<Student[]>('students', INITIAL_STUDENTS);
+  const [classes, setClasses] = useLocalStorage<ClassSession[]>('classes', INITIAL_CLASSES);
 
   const handleLogin = (selectedRole: Role) => {
     setRole(selectedRole);
     setIsLoggedIn(true);
+    setActiveTab('home');
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
     setActiveTab('home');
   };
 
@@ -40,17 +50,17 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
-        return role === 'teacher' ? <TeacherDashboard /> : <ParentDashboard />;
+        return role === 'teacher' ? <TeacherDashboard classes={classes} setClasses={setClasses} /> : <ParentDashboard />;
       case 'portal':
-        return role === 'teacher' ? <PortalPage /> : <ParentDashboard />;
+        return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard />;
       case 'schedule':
         return <SchedulePage />;
       case 'messages':
         return <MessagesPage />;
       case 'profile':
-        return <ProfilePage role={role} userAvatar={userAvatar} />;
+        return <ProfilePage role={role} userAvatar={userAvatar} onLogout={handleLogout} />;
       default:
-        return role === 'teacher' ? <TeacherDashboard /> : <ParentDashboard />;
+        return role === 'teacher' ? <TeacherDashboard classes={classes} setClasses={setClasses} /> : <ParentDashboard />;
     }
   };
 

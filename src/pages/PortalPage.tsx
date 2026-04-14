@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
-import { UserPlus, CheckCircle2, XCircle, Clock, Search, Filter, MoreHorizontal } from 'lucide-react';
+import { UserPlus, CheckCircle2, XCircle, Clock, Search, Filter, MoreHorizontal, GraduationCap, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { STUDENTS, CLASSES } from '../constants';
-import { Student } from '../types';
+import { Student, ClassSession, Grade } from '../types';
 
-export default function PortalPage() {
-  const [students, setStudents] = useState<Student[]>(STUDENTS);
+interface PortalPageProps {
+  students: Student[];
+  setStudents: (students: Student[] | ((prev: Student[]) => Student[])) => void;
+  classes: ClassSession[];
+}
+
+export default function PortalPage({ students, setStudents, classes }: PortalPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [isEnteringGrade, setIsEnteringGrade] = useState<string | null>(null);
   const [newStudent, setNewStudent] = useState({ name: '', number: '' });
+  const [newGrade, setNewGrade] = useState({ subject: 'Matematik', value: '' });
 
   const handleAttendance = (id: string, status: 'present' | 'absent' | 'late') => {
     setStudents(prev => prev.map(s => s.id === id ? { ...s, status } : s));
@@ -23,11 +29,32 @@ export default function PortalPage() {
       name: newStudent.name,
       number: newStudent.number,
       avatar: `https://i.pravatar.cc/150?u=${newStudent.name}`,
+      grades: []
     };
     
     setStudents(prev => [...prev, student]);
     setNewStudent({ name: '', number: '' });
     setIsAddingStudent(false);
+  };
+
+  const handleAddGrade = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isEnteringGrade || !newGrade.value) return;
+
+    const grade: Grade = {
+      subject: newGrade.subject,
+      value: Number(newGrade.value),
+      date: new Date().toLocaleDateString('tr-TR')
+    };
+
+    setStudents(prev => prev.map(s => 
+      s.id === isEnteringGrade 
+        ? { ...s, grades: [...(s.grades || []), grade] } 
+        : s
+    ));
+
+    setNewGrade({ subject: 'Matematik', value: '' });
+    setIsEnteringGrade(null);
   };
 
   const filteredStudents = students.filter(s => 
@@ -48,7 +75,7 @@ export default function PortalPage() {
         </div>
         
         <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
-          {CLASSES.map((c, i) => (
+          {classes.map((c, i) => (
             <motion.div 
               key={c.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -77,7 +104,7 @@ export default function PortalPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h3 className="text-2xl font-bold text-primary mb-1">Öğrenci Listesi & Yoklama</h3>
-            <p className="text-sm text-on-surface-variant font-medium">Bugünkü dersler için katılım durumunu işaretleyin.</p>
+            <p className="text-sm text-on-surface-variant font-medium">Bugünkü dersler için katılım durumunu işaretleyin ve not girişi yapın.</p>
           </div>
           
           <div className="flex gap-3">
@@ -107,7 +134,7 @@ export default function PortalPage() {
                 <tr className="bg-surface-container-high/50">
                   <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest">Öğrenci</th>
                   <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest">Numara</th>
-                  <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest text-center">Durum</th>
+                  <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest text-center">Yoklama</th>
                   <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest text-right">İşlemler</th>
                 </tr>
               </thead>
@@ -119,7 +146,12 @@ export default function PortalPage() {
                         <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/20">
                           <img src={s.avatar} alt={s.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         </div>
-                        <span className="font-bold text-primary text-sm">{s.name}</span>
+                        <div>
+                          <span className="font-bold text-primary text-sm block">{s.name}</span>
+                          {s.grades && s.grades.length > 0 && (
+                            <span className="text-[10px] text-secondary font-bold">Son Not: {s.grades[s.grades.length - 1].value}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="p-5 text-sm font-medium text-on-surface-variant">{s.number}</td>
@@ -146,9 +178,18 @@ export default function PortalPage() {
                       </div>
                     </td>
                     <td className="p-5 text-right">
-                      <button className="text-outline hover:text-primary transition-colors">
-                        <MoreHorizontal size={20} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => setIsEnteringGrade(s.id)}
+                          className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                          title="Not Gir"
+                        >
+                          <GraduationCap size={20} />
+                        </button>
+                        <button className="p-2 text-outline hover:text-primary transition-colors">
+                          <MoreHorizontal size={20} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -212,6 +253,82 @@ export default function PortalPage() {
                     className="flex-1 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
                   >
                     Kaydet
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Grade Entry Modal */}
+      <AnimatePresence>
+        {isEnteringGrade && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEnteringGrade(null)}
+              className="absolute inset-0 bg-primary/20 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h4 className="text-2xl font-bold text-primary">Not Girişi</h4>
+                <button onClick={() => setIsEnteringGrade(null)} className="text-outline hover:text-primary transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+              <p className="text-sm text-on-surface-variant mb-6">
+                <span className="font-bold text-primary">{students.find(s => s.id === isEnteringGrade)?.name}</span> için yeni not girişi yapın.
+              </p>
+              <form onSubmit={handleAddGrade} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Ders</label>
+                  <select 
+                    value={newGrade.subject}
+                    onChange={(e) => setNewGrade(prev => ({ ...prev, subject: e.target.value }))}
+                    className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary transition-all"
+                  >
+                    <option>Matematik</option>
+                    <option>Fizik</option>
+                    <option>Kimya</option>
+                    <option>Biyoloji</option>
+                    <option>Edebiyat</option>
+                    <option>Tarih</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Not Değeri (0-100)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    max="100"
+                    value={newGrade.value}
+                    onChange={(e) => setNewGrade(prev => ({ ...prev, value: e.target.value }))}
+                    className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary transition-all"
+                    placeholder="Örn: 85"
+                    required
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsEnteringGrade(null)}
+                    className="flex-1 py-3 bg-surface-container-high text-primary font-bold rounded-xl hover:bg-surface-container-highest transition-all"
+                  >
+                    İptal
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-3 bg-secondary text-white font-bold rounded-xl shadow-lg shadow-secondary/20 hover:opacity-90 transition-all"
+                  >
+                    Notu Kaydet
                   </button>
                 </div>
               </form>
