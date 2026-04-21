@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Role, Student, ClassSession } from './types';
+import { Role, Student, ClassSession, Message } from './types';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import TeacherDashboard from './pages/TeacherDashboard';
@@ -14,7 +14,7 @@ import MessagesPage from './pages/MessagesPage';
 import ProfilePage from './pages/ProfilePage';
 import PortalPage from './pages/PortalPage';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { STUDENTS as INITIAL_STUDENTS, CLASSES as INITIAL_CLASSES } from './constants';
+import { STUDENTS as INITIAL_STUDENTS, CLASSES as INITIAL_CLASSES, RECENT_MESSAGES as INITIAL_MESSAGES } from './constants';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useLocalStorage('isLoggedIn', false);
@@ -23,6 +23,7 @@ export default function App() {
   
   const [students, setStudents] = useLocalStorage<Student[]>('students', INITIAL_STUDENTS);
   const [classes, setClasses] = useLocalStorage<ClassSession[]>('classes', INITIAL_CLASSES);
+  const [messages, setMessages] = useLocalStorage<Message[]>('messages', INITIAL_MESSAGES);
 
   const handleLogin = (selectedRole: Role) => {
     setRole(selectedRole);
@@ -50,13 +51,13 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
-        return role === 'teacher' ? <TeacherDashboard classes={classes} setClasses={setClasses} /> : <ParentDashboard />;
+        return role === 'teacher' ? <TeacherDashboard classes={classes} setClasses={setClasses} onNavigate={setActiveTab} /> : <ParentDashboard />;
       case 'portal':
         return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard />;
       case 'schedule':
         return <SchedulePage />;
       case 'messages':
-        return <MessagesPage />;
+        return <MessagesPage messages={messages} setMessages={setMessages} />;
       case 'profile':
         return <ProfilePage role={role} userAvatar={userAvatar} onLogout={handleLogout} />;
       default:

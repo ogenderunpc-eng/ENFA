@@ -1,12 +1,14 @@
 import React from 'react';
-import { BookOpen, MapPin, Clock, User, MoreVertical, Lock, CheckCircle, BarChart3, Bell } from 'lucide-react';
-import { motion } from 'motion/react';
+import { BookOpen, MapPin, Clock, User, MoreVertical, Lock, CheckCircle, BarChart3, Bell, X, Calendar, FileText, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { CLASSES } from '../constants';
+import { ClassSession } from '../types';
 
 export default function SchedulePage() {
   const [selectedDay, setSelectedDay] = React.useState('Pazartesi');
+  const [selectedClass, setSelectedClass] = React.useState<ClassSession | null>(null);
 
-  const scheduleData: Record<string, typeof CLASSES> = {
+  const scheduleData: Record<string, ClassSession[]> = {
     'Pazartesi': CLASSES,
     'Salı': [
       {
@@ -127,7 +129,10 @@ export default function SchedulePage() {
                   <BookOpen size={18} />
                   Materyalleri Hazırla
                 </button>
-                <button className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-lg font-bold transition-all hover:bg-white/20">
+                <button 
+                  onClick={() => setSelectedClass(ongoingClass)}
+                  className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-lg font-bold transition-all hover:bg-white/20"
+                >
                   Ders Detayı
                 </button>
               </div>
@@ -147,6 +152,7 @@ export default function SchedulePage() {
                 key={c.id}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
+                onClick={() => setSelectedClass(c)}
                 className="bg-surface-container-lowest p-6 rounded-xl relative group cursor-pointer transition-all hover:shadow-[0_12px_40px_rgba(0,30,64,0.06)]"
               >
                 <div className="absolute left-0 top-6 bottom-6 w-1 bg-secondary rounded-r-full"></div>
@@ -223,6 +229,99 @@ export default function SchedulePage() {
           <button className="w-full py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-container transition-all">Analizi Gör</button>
         </div>
       </div>
+      {/* Lesson Detail Modal */}
+      <AnimatePresence>
+        {selectedClass && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedClass(null)}
+              className="absolute inset-0 bg-primary/20 backdrop-blur-md"
+            />
+            <motion.div 
+              layoutId={selectedClass.id}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="h-48 relative">
+                <img 
+                  src={selectedClass.image} 
+                  alt={selectedClass.title} 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                <button 
+                  onClick={() => setSelectedClass(null)}
+                  className="absolute top-6 right-6 w-10 h-10 bg-black/20 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/40 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent" />
+              </div>
+
+              <div className="p-8 -mt-12 relative bg-white">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="px-3 py-1 bg-secondary text-white text-[10px] font-black uppercase tracking-tighter rounded-full">
+                    GÜNCEL DERS
+                  </span>
+                  <div className="flex items-center gap-2 text-outline font-bold text-xs">
+                    <Clock size={14} />
+                    {selectedClass.time}
+                  </div>
+                </div>
+
+                <h3 className="text-3xl font-black text-primary leading-tight mb-2">{selectedClass.title}</h3>
+                <p className="text-on-surface-variant font-medium flex items-center gap-2 mb-8">
+                  <MapPin size={18} className="text-secondary" />
+                  {selectedClass.location} • {selectedClass.classGroup}
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                  <div className="space-y-4">
+                    <h5 className="font-bold text-primary flex items-center gap-2">
+                       <FileText size={18} className="text-secondary" />
+                       Der İçeriği
+                    </h5>
+                    <ul className="space-y-3">
+                      {['Konu Anlatımı', 'Pratik Sorular', 'Haftalık Ödev'].map((item, i) => (
+                        <li key={i} className="flex items-center gap-3 text-sm text-on-surface-variant font-medium">
+                          <div className="w-1.5 h-1.5 bg-secondary rounded-full" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="space-y-4">
+                    <h5 className="font-bold text-primary flex items-center gap-2">
+                       <Calendar size={18} className="text-secondary" />
+                       Önemli Tarihler
+                    </h5>
+                    <div className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+                      <p className="text-xs font-bold text-primary">Konu Sonu Testi</p>
+                      <p className="text-[10px] text-on-surface-variant">24 Nisan Cuma</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button className="flex-1 py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:opacity-90 transition-all">
+                    <Download size={18} />
+                    Materyali İndir
+                  </button>
+                  <button className="flex-1 py-4 bg-surface-container-high text-primary font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
+                    <BookOpen size={18} />
+                    Dersi Başlat
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
