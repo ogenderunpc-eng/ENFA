@@ -14,6 +14,8 @@ export interface Message {
   content: string;
   time: string;
   avatar?: string;
+  senderId?: string;
+  recipientId?: string;
 }
 
 export interface ClassSession {
@@ -47,6 +49,8 @@ export interface Student {
   avatar: string;
   status?: 'present' | 'absent' | 'late';
   grades?: Grade[];
+  class?: string;
+  parentName?: string;
 }
 
 export interface TeacherComment {

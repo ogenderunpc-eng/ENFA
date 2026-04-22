@@ -1,22 +1,23 @@
 import React, { useState, useRef } from 'react';
 import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { RECENT_MESSAGES } from '../constants';
-import { ClassSession } from '../types';
+import { Message, ClassSession } from '../types';
 
 interface TeacherDashboardProps {
   classes: ClassSession[];
+  messages: Message[];
   setClasses: (classes: ClassSession[] | ((prev: ClassSession[]) => ClassSession[])) => void;
   onNavigate?: (tab: string) => void;
 }
 
-export default function TeacherDashboard({ classes, setClasses, onNavigate }: TeacherDashboardProps) {
+export default function TeacherDashboard({ classes, messages, setClasses, onNavigate }: TeacherDashboardProps) {
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [isViewingReport, setIsViewingReport] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassSession | null>(null);
   const [newClass, setNewClass] = useState({ title: '', time: '', location: '', classGroup: '' });
   const [isRinging, setIsRinging] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const nextClass = classes.find(c => c.status === 'next') || classes[0];
@@ -184,12 +185,14 @@ export default function TeacherDashboard({ classes, setClasses, onNavigate }: Te
           transition={{ delay: 0.1 }}
           className="md:col-span-8 bg-surface-container-lowest rounded-2xl p-8 shadow-sm"
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h3 className="text-xl font-bold text-primary flex items-center gap-2">
               <BarChart3 className="text-secondary" size={24} />
-              Performans Analizi
+              Ders Bazlı Performans & Gelişim
             </h3>
-            <button className="text-xs text-secondary font-bold uppercase tracking-widest hover:underline">Detaylı Analizi Gör</button>
+            <button className="px-4 py-2 bg-secondary/10 text-secondary rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-secondary hover:text-white transition-all">
+              Detaylı Analizi Gör
+            </button>
           </div>
           
           <div className="h-64 flex items-end justify-between gap-2 px-4">
@@ -224,7 +227,7 @@ export default function TeacherDashboard({ classes, setClasses, onNavigate }: Te
           </h3>
           
           <div className="space-y-4 overflow-y-auto max-h-80 pr-2 custom-scrollbar">
-            {RECENT_MESSAGES.map((msg, i) => (
+            {messages.slice(0, 5).map((msg, i) => (
               <div key={msg.id} className={`p-4 bg-surface-container-lowest rounded-xl border-l-4 shadow-sm hover:translate-x-1 transition-transform ${i === 0 ? 'border-secondary' : 'border-outline-variant'}`}>
                 <div className="flex justify-between items-start mb-1">
                   <span className="font-bold text-sm text-on-surface">{msg.sender} ({msg.senderRole})</span>
@@ -235,7 +238,10 @@ export default function TeacherDashboard({ classes, setClasses, onNavigate }: Te
             ))}
           </div>
           
-          <button className="mt-auto pt-4 text-secondary text-sm font-bold flex items-center justify-center gap-1 hover:underline">
+          <button 
+            onClick={() => onNavigate?.('messages')}
+            className="mt-auto pt-4 text-secondary text-sm font-bold flex items-center justify-center gap-1 hover:underline border-none bg-transparent"
+          >
             Tüm Mesajları Gör
             <ArrowRight size={16} />
           </button>
@@ -341,7 +347,7 @@ export default function TeacherDashboard({ classes, setClasses, onNavigate }: Te
             </div>
             <button 
               onClick={() => setSelectedClass(classes[0])}
-              className="mt-auto text-primary text-xs font-bold hover:underline self-start"
+              className="mt-auto bg-white/50 px-4 py-2 rounded-lg text-primary text-xs font-bold hover:bg-primary hover:text-white transition-all self-start"
             >
               Görüntüle
             </button>
@@ -359,10 +365,13 @@ export default function TeacherDashboard({ classes, setClasses, onNavigate }: Te
               <p className="text-xs text-on-surface-variant">Veli toplantısı için hazırlık yap.</p>
             </div>
             <button 
-              onClick={() => onNavigate?.('schedule')}
-              className="mt-auto text-secondary text-xs font-bold hover:underline self-start"
+              onClick={() => {
+                setShowNotification(true);
+                setTimeout(() => setShowNotification(false), 3000);
+              }}
+              className="mt-auto bg-white/50 px-4 py-2 rounded-lg text-secondary text-xs font-bold hover:bg-secondary hover:text-white transition-all self-start"
             >
-              Takvime Git
+              Takvime Ekle
             </button>
           </motion.div>
 
@@ -643,6 +652,21 @@ export default function TeacherDashboard({ classes, setClasses, onNavigate }: Te
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {showNotification && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className="fixed bottom-8 left-1/2 z-[200] bg-primary text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
+          >
+            <CheckCircle2 className="text-secondary" size={24} />
+            <span className="font-bold">Etkinlik başarıyla takviminize eklendi!</span>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

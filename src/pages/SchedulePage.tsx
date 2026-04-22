@@ -1,12 +1,18 @@
-import React from 'react';
-import { BookOpen, MapPin, Clock, User, MoreVertical, Lock, CheckCircle, BarChart3, Bell, X, Calendar, FileText, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, MapPin, Clock, User, MoreVertical, Lock, CheckCircle, BarChart3, Bell, X, Calendar, FileText, Download, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CLASSES } from '../constants';
-import { ClassSession } from '../types';
+import { ClassSession, Role } from '../types';
 
-export default function SchedulePage() {
-  const [selectedDay, setSelectedDay] = React.useState('Pazartesi');
-  const [selectedClass, setSelectedClass] = React.useState<ClassSession | null>(null);
+interface SchedulePageProps {
+  role?: Role;
+  classes?: ClassSession[];
+}
+
+export default function SchedulePage({ role = 'teacher', classes = CLASSES }: SchedulePageProps) {
+  const [selectedDay, setSelectedDay] = useState('Pazartesi');
+  const [selectedClass, setSelectedClass] = useState<ClassSession | null>(null);
+  const [showNotification, setShowNotification] = useState(false);
 
   const scheduleData: Record<string, ClassSession[]> = {
     'Pazartesi': CLASSES,
@@ -197,7 +203,12 @@ export default function SchedulePage() {
                 <h5 className="font-bold text-primary">3 Yeni Okuma Materyali</h5>
                 <p className="text-sm text-on-surface-variant">Siyaset Bilimi dersi için ek kaynaklar paylaşıldı.</p>
               </div>
-              <button className="text-primary font-bold text-sm">Görüntüle</button>
+              <button 
+                onClick={() => setSelectedClass(classes[0])}
+                className="px-5 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+              >
+                Görüntüle
+              </button>
             </div>
             <div className="flex items-center gap-6 p-5 bg-surface-container-low rounded-xl">
               <div className="w-12 h-12 flex-shrink-0 bg-secondary/5 rounded-lg flex items-center justify-center">
@@ -207,7 +218,15 @@ export default function SchedulePage() {
                 <h5 className="font-bold text-primary">Sınav Hatırlatması</h5>
                 <p className="text-sm text-on-surface-variant">Lineer Cebir vizesi için son 4 gün.</p>
               </div>
-              <button className="text-primary font-bold text-sm">Takvime Ekle</button>
+              <button 
+                onClick={() => {
+                  setShowNotification(true);
+                  setTimeout(() => setShowNotification(false), 3000);
+                }}
+                className="px-5 py-2 bg-secondary text-white rounded-lg font-bold text-sm shadow-lg shadow-secondary/20 hover:opacity-90 transition-all"
+              >
+                Takvime Ekle
+              </button>
             </div>
           </div>
         </div>
@@ -216,7 +235,12 @@ export default function SchedulePage() {
           <div className="w-20 h-20 bg-primary-container rounded-full flex items-center justify-center mb-6 shadow-xl">
             <CheckCircle className="text-secondary-container" size={40} />
           </div>
-          <h4 className="text-xl font-bold text-primary mb-2">Haftalık İlerleme</h4>
+          <div className="flex justify-between items-center mb-6 w-full">
+            <h4 className="text-xl font-bold text-primary">Haftalık İlerleme</h4>
+            <button className="px-3 py-1 bg-primary/10 text-primary rounded-lg font-bold text-[10px] uppercase hover:bg-primary hover:text-white transition-all">
+              Detaylı Analiz
+            </button>
+          </div>
           <p className="text-sm text-on-surface-variant mb-6">Bu hafta toplam 12 saat derse katılım sağladın. Hedefine çok yakınsın!</p>
           <div className="w-full bg-surface-container-highest h-2 rounded-full mb-6">
             <motion.div 
@@ -312,14 +336,31 @@ export default function SchedulePage() {
                     <Download size={18} />
                     Materyali İndir
                   </button>
-                  <button className="flex-1 py-4 bg-surface-container-high text-primary font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
-                    <BookOpen size={18} />
-                    Dersi Başlat
-                  </button>
+                  {role === 'teacher' && (
+                    <button className="flex-1 py-4 bg-surface-container-high text-primary font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
+                      <BookOpen size={18} />
+                      Dersi Başlat
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {showNotification && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className="fixed bottom-8 left-1/2 z-[200] bg-primary text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
+          >
+            <CheckCircle2 className="text-secondary" size={24} />
+            <span className="font-bold">Etkinlik başarıyla takviminize eklendi!</span>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

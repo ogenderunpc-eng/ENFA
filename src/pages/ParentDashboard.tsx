@@ -1,10 +1,18 @@
-import React from 'react';
-import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight, BookOpen, BarChart3, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { GRADE_UPDATES, TEACHER_COMMENTS } from '../constants';
+import { ClassSession, Message } from '../types';
 
-export default function ParentDashboard() {
-  const [chartData] = React.useState(() => [
+interface ParentDashboardProps {
+  classes?: ClassSession[];
+  messages: Message[];
+  onNavigate?: (tab: string) => void;
+}
+
+export default function ParentDashboard({ onNavigate, messages }: ParentDashboardProps) {
+  const [showNotification, setShowNotification] = useState(false);
+  const [chartData] = useState(() => [
     { label: 'MAT', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
     { label: 'FİZ', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
     { label: 'KİM', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
@@ -40,9 +48,12 @@ export default function ParentDashboard() {
             <span className="text-xs font-medium text-on-surface-variant bg-surface-container px-2 py-1 rounded">2 saat önce</span>
           </div>
           <p className="text-on-surface font-medium mb-4 leading-relaxed">
-            Matematik öğretmeni Zeynep Hanım bir not paylaştı: "Ali'nin bugünkü trigonometri performansındaki artış takdire şayandı. Ödev takibini bu şekilde sürdürmesi başarısını sabitleyecektir."
+            Matematik öğretmeni Zeynep Hanım bir not paylaştı: "Ali bugün derste sayılarla kavga etti, 7 rakamı 8'i yemiş diyorlar. Lütfen evde rakamları barıştırın, yoksa matematik ormanı birbirine girecek."
           </p>
-          <button className="text-sm font-bold text-secondary flex items-center gap-1 hover:gap-2 transition-all">
+          <button 
+            onClick={() => onNavigate?.('messages')}
+            className="text-sm font-bold text-secondary flex items-center gap-1 hover:gap-2 transition-all border-none bg-transparent"
+          >
             Yanıtla <ArrowRight size={18} />
           </button>
         </motion.div>
@@ -77,22 +88,24 @@ export default function ParentDashboard() {
           transition={{ delay: 0.3 }}
           className="col-span-12 md:col-span-7 bg-surface-container-low rounded-xl p-8"
         >
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h3 className="text-xl font-bold text-primary mb-1">Ders Bazlı Gelişim</h3>
-              <p className="text-sm text-on-surface-variant">Son 4 Haftalık Performans Analizi</p>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-secondary"></span>
-                <span className="text-[10px] font-bold text-on-surface-variant uppercase">Ali</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-primary mb-1">Ders Bazlı Gelişim</h3>
+                <p className="text-sm text-on-surface-variant">Son 4 Haftalık Performans Analizi</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-outline-variant"></span>
-                <span className="text-[10px] font-bold text-on-surface-variant uppercase">Sınıf</span>
+              <div className="flex items-center gap-6">
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-secondary"></span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Ali</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-outline-variant"></span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Sınıf</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
           
           <div className="h-64 flex items-end justify-between gap-4 px-4">
             {chartData.map((data, i) => (
@@ -117,8 +130,38 @@ export default function ParentDashboard() {
           </div>
         </motion.div>
 
+        {/* Recent Messages for Parent */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="col-span-12 md:col-span-5 bg-surface-container-low rounded-xl p-6 flex flex-col"
+        >
+          <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
+            <MessageSquare className="text-secondary" size={20} />
+            Son Mesajlar
+          </h3>
+          <div className="space-y-4 mb-4">
+            {messages.slice(0, 3).map((msg) => (
+              <div key={msg.id} className="p-3 bg-white rounded-lg border border-outline-variant/10 shadow-sm">
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs font-bold text-primary">{msg.sender}</span>
+                  <span className="text-[10px] text-outline">{msg.time}</span>
+                </div>
+                <p className="text-[11px] text-on-surface-variant line-clamp-1">{msg.content}</p>
+              </div>
+            ))}
+          </div>
+          <button 
+            onClick={() => onNavigate?.('messages')}
+            className="mt-auto text-sm font-bold text-secondary flex items-center gap-1 hover:underline bg-transparent border-none"
+          >
+            Tüm Mesajları Gör <ArrowRight size={16} />
+          </button>
+        </motion.div>
+
         {/* Teacher Comments */}
-        <div className="col-span-12 md:col-span-5 flex flex-col gap-6">
+        <div className="col-span-12 md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -161,6 +204,71 @@ export default function ParentDashboard() {
           </motion.div>
         </div>
       </div>
+
+      {/* Daily Summary Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="pt-10 border-t border-outline-variant/10"
+      >
+        <h3 className="text-2xl font-bold font-headline text-primary mb-8 flex items-center gap-3">
+          <BarChart3 className="text-secondary" size={24} />
+          Günün Özeti
+        </h3>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="flex items-center gap-6 p-6 bg-surface-container-low rounded-2xl group hover:bg-surface-container-high transition-colors">
+            <div className="w-14 h-14 flex-shrink-0 bg-primary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <BookOpen className="text-primary" size={28} />
+            </div>
+            <div className="flex-grow">
+              <h5 className="font-bold text-primary text-lg">Yeni Okuma Materyalleri</h5>
+              <p className="text-sm text-on-surface-variant font-medium">Biyoloji dersi için 4 yeni kaynak paylaşıldı.</p>
+            </div>
+            <button 
+              onClick={() => onNavigate?.('schedule')}
+              className="px-5 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+            >
+              Görüntüle
+            </button>
+          </div>
+
+          <div className="flex items-center gap-6 p-6 bg-surface-container-low rounded-2xl group hover:bg-surface-container-high transition-colors">
+            <div className="w-14 h-14 flex-shrink-0 bg-secondary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Bell className="text-secondary" size={28} />
+            </div>
+            <div className="flex-grow">
+              <h5 className="font-bold text-primary text-lg">Sınav Hatırlatması</h5>
+              <p className="text-sm text-on-surface-variant font-medium">Fizik vizesi için son 3 gün.</p>
+            </div>
+            <button 
+              onClick={() => {
+                setShowNotification(true);
+                setTimeout(() => setShowNotification(false), 3000);
+              }}
+              className="px-5 py-2 bg-secondary text-white rounded-lg font-bold text-sm shadow-lg shadow-secondary/20 hover:opacity-90 transition-all"
+            >
+              Takvime Ekle
+            </button>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {showNotification && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className="fixed bottom-8 left-1/2 z-[200] bg-primary text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
+          >
+            <CheckCircle2 className="text-secondary" size={24} />
+            <span className="font-bold">Etkinlik başarıyla takviminize eklendi!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

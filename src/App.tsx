@@ -25,6 +25,26 @@ export default function App() {
   const [classes, setClasses] = useLocalStorage<ClassSession[]>('classes', INITIAL_CLASSES);
   const [messages, setMessages] = useLocalStorage<Message[]>('messages', INITIAL_MESSAGES);
 
+  const [teacherAvatar, setTeacherAvatar] = useLocalStorage<string>('teacherAvatar', "https://lh3.googleusercontent.com/aida-public/AB6AXuDe2PJTYBt9RL9CuhjZsSLoXQiK3M9zDmFR4fyfO0G6UJgb_bJHazeXsJxYJc_zuOWpG5zOX2cBF34LsC1Qtw2xugvkmf2YEvCucosQ4VXwgsE_VS8lQOyGxVNVI8gIAfThpHh5X4d_b8YOXW7Df9W_Z0aR3M0Sf3Lv6bMWderfeg_ReOUxg8Cy8vrpfom5FXEbGCGO5Mmu8IBMcQLSxS1ht6Bq5nBZ0pJC8K1CDcEcBuH16tScV6YGnEwmoyp4EP2m95fDg_njSZV9");
+  const [parentAvatar, setParentAvatar] = useLocalStorage<string>('parentAvatar', "https://lh3.googleusercontent.com/aida-public/AB6AXuDUxF_RxLpdrVDMunvdMJSIs3jqBUBF4iaRh5Oc5Z8tvGTzfr3C-wmtDCiO1z_Tj3YHJrn9vyy91mxRsbcBEOdOBZsPuN0FQ6unBFZHmlninOKvvb6FOPVCh11GiMuLUtI6LwDa16ryC8Up8PBkkxiK4T0pS5NFS7edDTtbFv1LhfjyTygN8rwNzJS9loxREO7eSxrNauqu4IkH5bu6eGGLTfC5qRxfM-U_W8JMBGkBnd8C-31CbenZJ66zX0coFdXydurTAIT3IsPD");
+
+  const userAvatar = role === 'teacher' ? teacherAvatar : parentAvatar;
+
+  const handleUpdateAvatar = (newAvatar: string) => {
+    if (role === 'teacher') {
+      setTeacherAvatar(newAvatar);
+    } else {
+      setParentAvatar(newAvatar);
+    }
+  };
+
+  useEffect(() => {
+    fetch('/api/messages')
+      .then(res => res.json())
+      .then(data => setMessages(data))
+      .catch(err => console.error('Error fetching messages:', err));
+  }, []);
+
   const handleLogin = (selectedRole: Role) => {
     setRole(selectedRole);
     setIsLoggedIn(true);
@@ -40,10 +60,6 @@ export default function App() {
     setRole(prev => prev === 'teacher' ? 'parent' : 'teacher');
   };
 
-  const userAvatar = role === 'teacher' 
-    ? "https://lh3.googleusercontent.com/aida-public/AB6AXuDe2PJTYBt9RL9CuhjZsSLoXQiK3M9zDmFR4fyfO0G6UJgb_bJHazeXsJxYJc_zuOWpG5zOX2cBF34LsC1Qtw2xugvkmf2YEvCucosQ4VXwgsE_VS8lQOyGxVNVI8gIAfThpHh5X4d_b8YOXW7Df9W_Z0aR3M0Sf3Lv6bMWderfeg_ReOUxg8Cy8vrpfom5FXEbGCGO5Mmu8IBMcQLSxS1ht6Bq5nBZ0pJC8K1CDcEcBuH16tScV6YGnEwmoyp4EP2m95fDg_njSZV9"
-    : "https://lh3.googleusercontent.com/aida-public/AB6AXuDUxF_RxLpdrVDMunvdMJSIs3jqBUBF4iaRh5Oc5Z8tvGTzfr3C-wmtDCiO1z_Tj3YHJrn9vyy91mxRsbcBEOdOBZsPuN0FQ6unBFZHmlninOKvvb6FOPVCh11GiMuLUtI6LwDa16ryC8Up8PBkkxiK4T0pS5NFS7edDTtbFv1LhfjyTygN8rwNzJS9loxREO7eSxrNauqu4IkH5bu6eGGLTfC5qRxfM-U_W8JMBGkBnd8C-31CbenZJ66zX0coFdXydurTAIT3IsPD";
-
   if (!isLoggedIn) {
     return <LoginPage onLogin={handleLogin} />;
   }
@@ -51,17 +67,21 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
-        return role === 'teacher' ? <TeacherDashboard classes={classes} setClasses={setClasses} onNavigate={setActiveTab} /> : <ParentDashboard />;
+        return role === 'teacher' 
+          ? <TeacherDashboard messages={messages} classes={classes} setClasses={setClasses} onNavigate={setActiveTab} /> 
+          : <ParentDashboard messages={messages} classes={classes} onNavigate={setActiveTab} />;
       case 'portal':
-        return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard />;
+        return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} onNavigate={setActiveTab} />;
       case 'schedule':
-        return <SchedulePage />;
+        return <SchedulePage role={role} />;
       case 'messages':
-        return <MessagesPage messages={messages} setMessages={setMessages} />;
+        return <MessagesPage messages={messages} setMessages={setMessages} role={role} userAvatar={userAvatar} students={students} />;
       case 'profile':
-        return <ProfilePage role={role} userAvatar={userAvatar} onLogout={handleLogout} />;
+        return <ProfilePage role={role} userAvatar={userAvatar} onLogout={handleLogout} onUpdateAvatar={handleUpdateAvatar} />;
       default:
-        return role === 'teacher' ? <TeacherDashboard classes={classes} setClasses={setClasses} /> : <ParentDashboard />;
+        return role === 'teacher' 
+          ? <TeacherDashboard messages={messages} classes={classes} setClasses={setClasses} onNavigate={setActiveTab} /> 
+          : <ParentDashboard messages={messages} classes={classes} onNavigate={setActiveTab} />;
     }
   };
 

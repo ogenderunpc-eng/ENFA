@@ -1,41 +1,62 @@
 import React, { useState } from 'react';
 import { Search, Plus, MoreVertical, Send, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Message } from '../types';
+import { Message, Role, Student } from '../types';
 
 interface MessagesPageProps {
   messages: Message[];
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
+  role: Role;
+  userAvatar: string;
+  students: Student[];
 }
 
-export default function MessagesPage({ messages, setMessages }: MessagesPageProps) {
+export default function MessagesPage({ messages, setMessages, role, userAvatar, students }: MessagesPageProps) {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [targetStudent, setTargetStudent] = useState<Student | null>(null);
 
   const currentChat = messages.find(m => m.id === selectedChat);
 
-  const handleSendMessage = () => {
-    if (!replyText.trim() || !selectedChat) return;
+  const handleSendMessage = (text?: string) => {
+    const messageContent = text || replyText;
+    if (!messageContent.trim()) return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
+    const newMessageBody = {
       sender: 'Siz',
-      senderRole: 'Öğretmen',
-      content: replyText,
-      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDe2PJTYBt9RL9CuhjZsSLoXQiK3M9zDmFR4fyfO0G6UJgb_bJHazeXsJxYJc_zuOWpG5zOX2cBF34LsC1Qtw2xugvkmf2YEvCucosQ4VXwgsE_VS8lQOyGxVNVI8gIAfThpHh5X4d_b8YOXW7Df9W_Z0aR3M0Sf3Lv6bMWderfeg_ReOUxg8Cy8vrpfom5FXEbGCGO5Mmu8IBMcQLSxS1ht6Bq5nBZ0pJC8K1CDcEcBuH16tScV6YGnEwmoyp4EP2m95fDg_njSZV9"
+      senderRole: role === 'teacher' ? 'Öğretmen' : 'Veli',
+      content: messageContent,
+      avatar: userAvatar,
+      recipientId: isAddingNew ? targetStudent?.id : undefined
     };
 
-    // In a real app we'd append to chat history. Here we'll just update the messages list.
-    setMessages(prev => [newMessage, ...prev.filter(m => m.id !== selectedChat)]);
-    setReplyText('');
-    setSelectedChat(null);
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newMessageBody),
+    })
+    .then(res => res.json())
+    .then(savedMessage => {
+      if (isAddingNew) {
+        setMessages(prev => [savedMessage, ...prev]);
+        setIsAddingNew(false);
+        setTargetStudent(null);
+      } else {
+        setMessages(prev => [savedMessage, ...prev.filter(m => m.id !== selectedChat)]);
+      }
+      setReplyText('');
+      setSelectedChat(null);
+    })
+    .catch(err => console.error('Error sending message:', err));
   };
 
   const filteredMessages = messages.filter(m => 
-    m.sender.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    m.content.toLowerCase().includes(searchTerm.toLowerCase())
+    (m.sender?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+    (m.content?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -52,7 +73,10 @@ export default function MessagesPage({ messages, setMessages }: MessagesPageProp
             <header>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-extrabold text-primary tracking-tight">Mesajlar</h2>
-                <button className="w-10 h-10 bg-secondary text-white rounded-full flex items-center justify-center shadow-lg shadow-secondary/20 active:scale-95 transition-all">
+                <button 
+                  onClick={() => setIsAddingNew(true)}
+                  className="w-10 h-10 bg-secondary text-white rounded-full flex items-center justify-center shadow-lg shadow-secondary/20 active:scale-95 transition-all"
+                >
                   <Plus size={24} />
                 </button>
               </div>
@@ -99,7 +123,7 @@ export default function MessagesPage({ messages, setMessages }: MessagesPageProp
                     </p>
                   </div>
                   
-                  <button className="w-8 h-8 flex items-center justify-center text-outline-variant hover:text-primary transition-colors">
+                  <button className="w-8 h-8 flex items-center justify-center text-outline-variant hover:text-primary transition-colors border-none bg-transparent">
                     <MoreVertical size={20} />
                   </button>
                 </motion.div>
@@ -118,7 +142,7 @@ export default function MessagesPage({ messages, setMessages }: MessagesPageProp
             <header className="p-4 bg-white border-b border-outline-variant/10 flex items-center gap-4">
               <button 
                 onClick={() => setSelectedChat(null)}
-                className="p-2 hover:bg-surface-container rounded-full transition-colors"
+                className="p-2 hover:bg-surface-container rounded-full transition-colors border-none bg-transparent"
               >
                 <ArrowLeft size={24} className="text-primary" />
               </button>
@@ -129,7 +153,7 @@ export default function MessagesPage({ messages, setMessages }: MessagesPageProp
                 <h4 className="font-bold text-primary leading-tight">{currentChat?.sender}</h4>
                 <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">{currentChat?.senderRole}</p>
               </div>
-              <button className="ml-auto p-2 text-outline-variant hover:text-primary transition-colors">
+              <button className="ml-auto p-2 text-outline-variant hover:text-primary transition-colors border-none bg-transparent">
                 <MoreVertical size={20} />
               </button>
             </header>
@@ -142,7 +166,6 @@ export default function MessagesPage({ messages, setMessages }: MessagesPageProp
                 </div>
                 <span className="text-[10px] text-outline px-2 font-medium">{currentChat?.time}</span>
               </div>
-              {/* Dummy history or empty for now */}
             </div>
 
             {/* Chat Footer */}
@@ -158,13 +181,89 @@ export default function MessagesPage({ messages, setMessages }: MessagesPageProp
                   className="flex-grow bg-transparent border-none focus:ring-0 py-3 px-4 text-sm text-on-surface"
                 />
                 <button 
-                  onClick={handleSendMessage}
-                  className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20 hover:ring-4 hover:ring-primary/10"
+                  onClick={() => handleSendMessage()}
+                  className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20 hover:ring-4 hover:ring-primary/10 border-none"
                 >
                   <Send size={18} />
                 </button>
               </div>
             </footer>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isAddingNew && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-gray-900"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl"
+            >
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center text-gray-900 font-bold">
+                <h3 className="text-xl">
+                  {role === 'teacher' ? 'Alıcı Seçin' : 'Öğretmene Mesaj'}
+                </h3>
+                <button onClick={() => { setIsAddingNew(false); setTargetStudent(null); }} className="text-gray-400 hover:text-gray-600 border-none bg-transparent">
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                {!targetStudent && role === 'teacher' ? (
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2 no-scrollbar">
+                    {students.map(student => (
+                      <button
+                        key={student.id}
+                        onClick={() => setTargetStudent(student)}
+                        className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100 bg-white"
+                      >
+                        <img src={student.avatar} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+                        <div className="text-left">
+                          <p className="font-medium text-gray-900">{student.name}</p>
+                          <p className="text-sm text-gray-500">{student.class} - {student.parentName}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-gray-900">
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                      <img 
+                        src={targetStudent?.avatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuDe2PJTYBt9RL9CuhjZsSLoXQiK3M9zDmFR4fyfO0G6UJgb_bJHazeXsJxYJc_zuOWpG5zOX2cBF34LsC1Qtw2xugvkmf2YEvCucosQ4VXwgsE_VS8lQOyGxVNVI8gIAfThpHh5X4d_b8YOXW7Df9W_Z0aR3M0Sf3Lv6bMWderfeg_ReOUxg8Cy8vrpfom5FXEbGCGO5Mmu8IBMcQLSxS1ht6Bq5nBZ0pJC8K1CDcEcBuH16tScV6YGnEwmoyp4EP2m95fDg_njSZV9"} 
+                        alt="Recipient" 
+                        className="w-12 h-12 rounded-full object-cover" 
+                      />
+                      <div>
+                        <p className="font-semibold">
+                          {role === 'teacher' ? `${targetStudent?.name} Velisi` : 'Okul Yönetimi / Öğretmen'}
+                        </p>
+                        <p className="text-sm text-gray-500">Yeni Mesaj</p>
+                      </div>
+                    </div>
+                    <textarea
+                      placeholder="Mesajınızı yazın..."
+                      className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-secondary h-32 resize-none text-gray-900"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                    />
+                    <button
+                      onClick={() => handleSendMessage()}
+                      className="w-full py-4 bg-secondary text-white rounded-xl font-semibold hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2 border-none"
+                    >
+                      <Send className="w-5 h-5" />
+                      Gönder
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

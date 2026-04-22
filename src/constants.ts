@@ -16,34 +16,34 @@ export const COLORS = {
 };
 
 export const STUDENTS: Student[] = [
-  { id: '1', name: 'Ali Demir', number: '1024', avatar: 'https://i.pravatar.cc/150?u=ali' },
-  { id: '2', name: 'Ayşe Kaya', number: '1025', avatar: 'https://i.pravatar.cc/150?u=ayse' },
-  { id: '3', name: 'Can Özkan', number: '1026', avatar: 'https://i.pravatar.cc/150?u=can' },
-  { id: '4', name: 'Deniz Yılmaz', number: '1027', avatar: 'https://i.pravatar.cc/150?u=deniz' },
-  { id: '5', name: 'Elif Şahin', number: '1028', avatar: 'https://i.pravatar.cc/150?u=elif' },
-  { id: '6', name: 'Fatih Aras', number: '1029', avatar: 'https://i.pravatar.cc/150?u=fatih' },
+  { id: '1', name: 'Ali Demir', number: '1024', avatar: 'https://i.pravatar.cc/150?u=ali', class: '12-A', parentName: 'Mehmet Demir' },
+  { id: '2', name: 'Ayşe Kaya', number: '1025', avatar: 'https://i.pravatar.cc/150?u=ayse', class: '12-B', parentName: 'Fatma Kaya' },
+  { id: '3', name: 'Can Özkan', number: '1026', avatar: 'https://i.pravatar.cc/150?u=can', class: '11-A', parentName: 'Ali Özkan' },
+  { id: '4', name: 'Deniz Yılmaz', number: '1027', avatar: 'https://i.pravatar.cc/150?u=deniz', class: '10-C', parentName: 'Zehra Yılmaz' },
+  { id: '5', name: 'Elif Şahin', number: '1028', avatar: 'https://i.pravatar.cc/150?u=elif', class: '12-A', parentName: 'Osman Şahin' },
+  { id: '6', name: 'Fatih Aras', number: '1029', avatar: 'https://i.pravatar.cc/150?u=fatih', class: '9-B', parentName: 'Aylin Aras' },
 ];
 
 export const RECENT_MESSAGES: Message[] = [
   {
     id: '1',
-    sender: 'Arda Demir',
-    senderRole: 'Veli',
-    content: 'Hocam merhaba, yarınki sınav kapsamı hakkında bir sorum olacaktı...',
+    sender: 'Matematik Canavarı (Öğretmen)',
+    senderRole: 'Öğretmen',
+    content: 'Üçgenler bugün kare olmaya karar verdi, lütfen cetvellerinizi yanınızda getirmeyin, bisküvi getirin.',
     time: '14:20',
   },
   {
     id: '2',
-    sender: 'Zeynep Kaya',
-    senderRole: 'Veli',
-    content: "Zeynep'in sağlık durumu düzeldi, bugün okula katılım sağlayacak.",
+    sender: 'Fizikçi Fikret (Öğretmen)',
+    senderRole: 'Öğretmen',
+    content: "Yerçekimi bugün %20 indirimde, zıplarken dikkatli olun tavanda kalabilirsiniz.",
     time: '11:05',
   },
   {
     id: '3',
-    sender: 'Mert Öz',
-    senderRole: 'Veli',
-    content: 'Ödev dosyasını sisteme yüklemekte sorun yaşıyoruz, yardımcı olabilir misiniz?',
+    sender: 'Kimyacı Kazım (Öğretmen)',
+    senderRole: 'Öğretmen',
+    content: 'Deney tüplerine yanlışlıkla meyve suyu koydum, laboratuvar artık çok lezzetli kokuyor.',
     time: 'Dün',
   },
 ];
@@ -116,19 +116,19 @@ export const MESSAGES: Message[] = [
   ...RECENT_MESSAGES,
   {
     id: '4',
-    sender: 'Selin Yılmaz',
-    senderRole: 'Rehberlik',
-    content: 'Ali ile yaptığımız görüşme oldukça verimli geçti. Detayları yarın konuşabiliriz.',
+    sender: 'Biyoloji Bilge (Öğretmen)',
+    senderRole: 'Öğretmen',
+    content: 'Hücrelerin bugün tatili var, mitokondriler enerji üretmeyi bıraktı pikniğe gitti.',
     time: '2 gün önce',
-    avatar: 'https://i.pravatar.cc/150?u=selin'
+    avatar: 'https://i.pravatar.cc/150?u=bilge'
   },
   {
     id: '5',
-    sender: 'Hakan Demir',
-    senderRole: 'Müdür Yardımcısı',
-    content: 'Haftalık ders programındaki değişiklikler hakkında bilgilendirme.',
+    sender: 'Edebiyat Erdem (Öğretmen)',
+    senderRole: 'Öğretmen',
+    content: 'Şair bugün çok dertli, mısralar birbirine küstü, kafiyeler firar etti.',
     time: '3 gün önce',
-    avatar: 'https://i.pravatar.cc/150?u=hakan'
+    avatar: 'https://i.pravatar.cc/150?u=erdem'
   }
 ];
 

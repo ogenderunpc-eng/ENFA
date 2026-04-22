@@ -10,10 +10,23 @@ interface LoginPageProps {
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [view, setView] = useState<'selection' | 'login'>('selection');
   const [selectedRole, setSelectedRole] = useState<Role>('teacher');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
 
   const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
+    setError(false);
     setView('login');
+  };
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const storedPassword = localStorage.getItem('systemPassword') || '1212';
+    if (password === storedPassword) {
+      onLogin(selectedRole);
+    } else {
+      setError(true);
+    }
   };
 
   return (
@@ -36,9 +49,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <div className="z-10 mt-12">
               <div className="bg-white/10 backdrop-blur-md p-6 rounded-lg border border-white/10">
                 <Sparkles className="text-secondary-container mb-2" size={24} />
-                <p className="italic text-sm font-light leading-snug">
-                  "Eğitim, bir kovanı doldurmak değil, bir ateşi yakmaktır."
-                </p>
+                <div className="space-y-3">
+                  <p className="italic text-sm font-light leading-snug">
+                    "Okul, geleceğin temeli"
+                  </p>
+                  <p className="italic text-sm font-light leading-snug">
+                    "Bilgi en büyük hazinedir"
+                  </p>
+                  <p className="italic text-sm font-light leading-snug">
+                    "Eğitimdir ki bir milleti hür yaşatır"
+                  </p>
+                </div>
                 <p className="mt-2 text-xs font-bold uppercase tracking-widest text-white/60">Kurumsal Vizyon</p>
               </div>
             </div>
@@ -124,7 +145,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   </header>
 
                   {/* Form */}
-                  <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); onLogin(selectedRole); }}>
+                  <form className="space-y-6" onSubmit={handleLoginSubmit}>
                     <div className="space-y-1">
                       <label className="block text-xs font-bold text-primary uppercase tracking-wider ml-1">E-Posta Adresi</label>
                       <input 
@@ -141,11 +162,25 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                         <button type="button" className="text-xs font-medium text-secondary hover:underline">Şifremi Unuttum</button>
                       </div>
                       <input 
-                        className="w-full bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-primary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
+                        className={`w-full bg-surface-container-high border-none rounded-xl focus:ring-2 ${error ? 'focus:ring-error ring-2 ring-error' : 'focus:ring-primary'} py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all`} 
                         type="password" 
-                        placeholder="••••••••"
+                        placeholder="••••"
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (error) setError(false);
+                        }}
                         required
                       />
+                      {error && (
+                        <motion.p 
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-xs font-bold text-error mt-2 ml-1"
+                        >
+                          Hatalı şifre. Lütfen tekrar deneyin.
+                        </motion.p>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-3 pt-4">
