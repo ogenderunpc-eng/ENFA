@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GraduationCap, Users, ArrowRight, Sparkles, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Role } from '../types';
@@ -8,10 +8,25 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
-  const [view, setView] = useState<'selection' | 'login'>('selection');
+  const [view, setView] = useState<'selection' | 'login' | '2fa'>('selection');
   const [selectedRole, setSelectedRole] = useState<Role>('teacher');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
+  const [faCode, setFaCode] = useState('');
+  const [faError, setFaError] = useState(false);
+
+  useEffect(() => {
+    // Check for magic link auto-login (from QR scan)
+    const params = new URLSearchParams(window.location.search);
+    const magicLink = params.get('magic_link');
+    const roleParam = params.get('role') as Role;
+    
+    if (magicLink === 'true' && roleParam) {
+      // Clear params and login
+      window.history.replaceState({}, document.title, window.location.pathname);
+      onLogin(roleParam);
+    }
+  }, [onLogin]);
 
   const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
@@ -23,9 +38,26 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     e.preventDefault();
     const storedPassword = localStorage.getItem('systemPassword') || '1212';
     if (password === storedPassword) {
-      onLogin(selectedRole);
+      const isSmsEnabled = localStorage.getItem('2fa_sms') === 'true';
+      const isAuthEnabled = localStorage.getItem('2fa_authenticator') === 'true';
+      
+      if (isSmsEnabled || isAuthEnabled) {
+        setView('2fa');
+      } else {
+        onLogin(selectedRole);
+      }
     } else {
       setError(true);
+    }
+  };
+
+  const handle2FASubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Default verification code is 123456
+    if (faCode === '123456') {
+      onLogin(selectedRole);
+    } else {
+      setFaError(true);
     }
   };
 
@@ -121,7 +153,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     </button>
                   </div>
                 </motion.div>
-              ) : (
+              ) : view === 'login' ? (
                 <motion.div 
                   key="login"
                   initial={{ opacity: 0, x: 20 }}
@@ -191,6 +223,82 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                         Sisteme Giriş Yap
                         <ArrowRight size={18} />
                       </button>
+                    </div>
+                  </form>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="2fa"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="w-full"
+                >
+                  <button 
+                    onClick={() => {
+                      setView('login');
+                      setFaCode('');
+                      setFaError(false);
+                    }}
+                    className="flex items-center gap-2 text-sm font-bold text-secondary mb-8 hover:underline"
+                  >
+                    <ArrowRight className="rotate-180" size={16} />
+                    Geri Dön
+                  </button>
+
+                  <header className="mb-10 text-center">
+                    <div className="w-20 h-20 bg-secondary/10 text-secondary rounded-3xl flex items-center justify-center mx-auto mb-6">
+                      <Sparkles size={40} />
+                    </div>
+                    <h2 className="font-headline text-4xl font-bold text-primary mb-2 tracking-tight">
+                      İki Adımlı Doğrulama
+                    </h2>
+                    <p className="text-on-surface-variant">
+                      Hesabınızı korumak için 2FA kodu gereklidir.
+                    </p>
+                  </header>
+
+                  {/* 2FA Form */}
+                  <form className="space-y-6" onSubmit={handle2FASubmit}>
+                    <div className="space-y-4">
+                      <p className="text-center text-xs font-bold text-primary uppercase tracking-widest bg-surface-container-high py-2 rounded-lg">
+                        {localStorage.getItem('2fa_sms') === 'true' ? 'SMS KODUNU GİRİN' : 'AUTHENTICATOR KODUNU GİRİN'}
+                      </p>
+                      <input 
+                        className={`w-full bg-surface-container-high border-none rounded-2xl focus:ring-2 ${faError ? 'focus:ring-error ring-2 ring-error' : 'focus:ring-primary'} py-5 text-center text-3xl font-black tracking-[0.5em] text-primary placeholder:text-outline-variant/30 transition-all outline-none`} 
+                        type="text" 
+                        maxLength={6}
+                        placeholder="000000"
+                        value={faCode}
+                        onChange={(e) => {
+                          setFaCode(e.target.value.replace(/[^0-9]/g, ''));
+                          if (faError) setFaError(false);
+                        }}
+                        autoFocus
+                        required
+                      />
+                      {faError && (
+                        <motion.p 
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-center text-xs font-bold text-error mt-2"
+                        >
+                          Hatalı doğrulama kodu. (İpucu: 123456)
+                        </motion.p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-3 pt-4">
+                      <button 
+                        className="w-full bg-primary text-white font-headline font-bold py-5 rounded-2xl shadow-xl shadow-primary/20 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2" 
+                        type="submit"
+                      >
+                        Doğrula ve Giriş Yap
+                        <ArrowRight size={20} />
+                      </button>
+                      <p className="text-center text-[10px] text-on-surface-variant font-medium mt-4">
+                        Sorun mu yaşıyorsunuz? <button type="button" className="text-secondary font-bold hover:underline">Destek ekibiyle iletişime geçin</button>
+                      </p>
                     </div>
                   </form>
                 </motion.div>

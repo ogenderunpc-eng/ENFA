@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Settings, LogOut, Shield, Bell, CreditCard, Award, Book, CheckCircle2, ArrowRight, ArrowLeft, Lock, Plus, History, FileText, CreditCard as CardIcon, Smartphone, Camera, Upload } from 'lucide-react';
+import { Settings, LogOut, Shield, Bell, CreditCard, Award, Book, CheckCircle2, ArrowRight, ArrowLeft, Lock, Plus, History, FileText, CreditCard as CardIcon, Smartphone, Camera, Upload, ShieldCheck, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { USER_STATS } from '../constants';
 import { Role } from '../types';
@@ -9,12 +9,15 @@ interface ProfilePageProps {
   userAvatar: string;
   userName: string;
   userEmail: string;
+  userPhone: string;
+  isDeviceLinked: boolean;
+  setIsDeviceLinked: (val: boolean) => void;
   onLogout: () => void;
   onUpdateAvatar: (url: string) => void;
-  onUpdateProfile: (data: { avatar?: string; name?: string; email?: string }) => void;
+  onUpdateProfile: (data: { avatar?: string; name?: string; email?: string; phone?: string }) => void;
 }
 
-export default function ProfilePage({ role, userAvatar, userName, userEmail, onLogout, onUpdateAvatar, onUpdateProfile }: ProfilePageProps) {
+export default function ProfilePage({ role, userAvatar, userName, userEmail, userPhone, isDeviceLinked, setIsDeviceLinked, onLogout, onUpdateAvatar, onUpdateProfile }: ProfilePageProps) {
   const [activeSetting, setActiveSetting] = React.useState<string | null>(null);
   const [showToast, setShowToast] = React.useState(false);
   const [currentPlan, setCurrentPlan] = React.useState('Aeon Pro Plus');
@@ -23,6 +26,10 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
   const [tempAvatarUrl, setTempAvatarUrl] = React.useState(userAvatar);
   const [tempName, setTempName] = React.useState(userName);
   const [tempEmail, setTempEmail] = React.useState(userEmail);
+  const [tempPhone, setTempPhone] = React.useState(userPhone);
+
+  const [isLinkingDevice, setIsLinkingDevice] = React.useState(false);
+  const [linkStep, setLinkStep] = React.useState(1);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,7 +38,8 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
     setTempAvatarUrl(userAvatar);
     setTempName(userName);
     setTempEmail(userEmail);
-  }, [userAvatar, userName, userEmail]);
+    setTempPhone(userPhone);
+  }, [userAvatar, userName, userEmail, userPhone]);
   
   // Password Change States
   const [isChangingPassword, setIsChangingPassword] = React.useState(false);
@@ -43,16 +51,39 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
 
   // 2FA States
   const [faMethods, setFaMethods] = React.useState({
-    sms: false,
-    authenticator: false
+    sms: localStorage.getItem('2fa_sms') === 'true',
+    authenticator: localStorage.getItem('2fa_authenticator') === 'true'
   });
+  const [isVerifyingFA, setIsVerifyingFA] = React.useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = React.useState('');
+  const [faError, setFaError] = React.useState<string | null>(null);
 
-  const toggle2FA = (method: 'sms' | 'authenticator') => {
-    setFaMethods(prev => {
-      const newState = { ...prev, [method]: !prev[method] };
-      return newState;
-    });
-    toastSuccess(`${method === 'sms' ? 'SMS' : 'Authenticator'} doğrulama ${!faMethods[method] ? 'aktif edildi' : 'devre dışı bırakıldı'}.`);
+  const startToggle2FA = (method: 'sms' | 'authenticator') => {
+    if (!faMethods[method]) {
+      // Enabling - show verification
+      setIsVerifyingFA(method);
+      setVerificationCode('');
+      setFaError(null);
+    } else {
+      // Disabling - direct
+      const newState = { ...faMethods, [method]: false };
+      setFaMethods(newState);
+      localStorage.setItem(`2fa_${method}`, 'false');
+      toastSuccess(`${method === 'sms' ? 'SMS' : 'Authenticator'} doğrulaması devre dışı bırakıldı.`);
+    }
+  };
+
+  const verifyAndEnable = () => {
+    if (verificationCode === '123456') { // Mock verification code
+      const method = isVerifyingFA as 'sms' | 'authenticator';
+      const newState = { ...faMethods, [method]: true };
+      setFaMethods(newState);
+      localStorage.setItem(`2fa_${method}`, 'true');
+      setIsVerifyingFA(null);
+      toastSuccess(`${method === 'sms' ? 'SMS' : 'Authenticator'} doğrulaması başarıyla aktif edildi.`);
+    } else {
+      setFaError('Hatalı doğrulama kodu. (İpucu: 123456)');
+    }
   };
 
   const toastSuccess = (msg: string) => {
@@ -63,6 +94,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
 
   const menuItems = [
     { id: 'security', icon: Shield, label: 'Güvenlik ve Gizlilik', color: 'text-blue-500' },
+    { id: 'mobile', icon: Smartphone, label: 'Mobil Uygulama Bağla', color: 'text-purple-500' },
     { id: 'notifications', icon: Bell, label: 'Bildirim Ayarları', color: 'text-orange-500' },
     { id: 'payment', icon: CreditCard, label: 'Ödeme ve Abonelik', color: 'text-green-500' },
     { id: 'settings', icon: Settings, label: 'Genel Ayarlar', color: 'text-gray-500' },
@@ -294,7 +326,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
                           </div>
                         </div>
                         <button 
-                          onClick={() => toggle2FA('sms')}
+                          onClick={() => startToggle2FA('sms')}
                           className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${faMethods.sms ? 'bg-secondary' : 'bg-outline-variant/30'}`}
                         >
                           <motion.div 
@@ -314,7 +346,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
                           </div>
                         </div>
                         <button 
-                          onClick={() => toggle2FA('authenticator')}
+                          onClick={() => startToggle2FA('authenticator')}
                           className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${faMethods.authenticator ? 'bg-secondary' : 'bg-outline-variant/30'}`}
                         >
                           <motion.div 
@@ -345,6 +377,139 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeSetting === 'mobile' && (
+              <div className="space-y-8">
+                <div className="text-center space-y-4 max-w-md mx-auto">
+                  <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-sm transition-colors ${isDeviceLinked ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'}`}>
+                    {isDeviceLinked ? <ShieldCheck size={40} /> : <Smartphone size={40} />}
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black text-primary">
+                      {isDeviceLinked ? 'Cihaz Bağlandı' : 'Aeon Academy Mobil'}
+                    </h4>
+                    <p className="text-sm text-on-surface-variant">
+                      {isDeviceLinked 
+                        ? 'iPhone 15 Pro cihazınız başarıyla hesabınızla eşleştirildi.' 
+                        : 'Aeon Academy deneyimini telefonunuza taşıyın ve anlık bildirimlerle her şeyden haberdar olun.'}
+                    </p>
+                  </div>
+                </div>
+
+                {isDeviceLinked ? (
+                  <div className="space-y-6">
+                    <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-outline-variant/10">
+                             <Smartphone className="text-primary" size={24} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-primary">Ahmet's iPhone</p>
+                            <p className="text-[10px] text-on-surface-variant font-medium">Son senkronizasyon: Az önce</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                           <span className="text-[10px] font-bold text-green-600 uppercase">Aktif</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setIsDeviceLinked(false);
+                        toastSuccess('Cihaz bağlantısı kesildi.');
+                      }}
+                      className="w-full py-4 text-error font-bold text-sm bg-error/10 rounded-2xl hover:bg-error/20 transition-all"
+                    >
+                      Cihazın Bağlantısını Kes
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10">
+                    {isLinkingDevice ? (
+                      <div className="flex flex-col items-center justify-center py-8 space-y-6 text-center">
+                        {linkStep === 1 ? (
+                          <>
+                            <div className="w-16 h-16 border-4 border-secondary border-t-transparent rounded-full animate-spin"></div>
+                            <div>
+                               <p className="text-sm font-bold text-primary">QR Kod Okundu!</p>
+                               <p className="text-xs text-on-surface-variant mt-1">Cihaz doğrulanıyor...</p>
+                            </div>
+                          </>
+                        ) : (
+                          <motion.div 
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="space-y-4"
+                          >
+                             <div className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-green-200">
+                                <CheckCircle2 size={32} />
+                             </div>
+                             <div>
+                                <p className="text-sm font-bold text-primary">Bağlantı Başarılı!</p>
+                                <p className="text-xs text-on-surface-variant mt-1">Bildirimler otomatik olarak aktif edildi.</p>
+                             </div>
+                          </motion.div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="p-4 bg-white rounded-2xl shadow-md border border-outline-variant/10">
+                        <div 
+                            onClick={() => {
+                              setIsLinkingDevice(true);
+                              setLinkStep(1);
+                              setTimeout(() => setLinkStep(2), 2000);
+                              setTimeout(() => {
+                                setIsDeviceLinked(true);
+                                setIsLinkingDevice(false);
+                                toastSuccess('Mobil cihaz başarıyla bağlandı!');
+                              }, 4000);
+                            }}
+                            className="w-48 h-48 bg-slate-100 flex items-center justify-center relative overflow-hidden rounded-xl border border-dashed border-slate-300 cursor-pointer group"
+                          >
+                            <img 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '?magic_link=true&role=' + role)}`} 
+                              alt="QR Code" 
+                              className="w-full h-full p-2 group-hover:blur-sm transition-all"
+                            />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-white/80">
+                               <Sparkles className="text-secondary mb-2" size={32} />
+                               <p className="text-[10px] font-bold text-primary text-center px-4 uppercase tracking-widest text-balance">Gerçek Cihazla Tarat veya Simüle Et</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-center space-y-4">
+                          <p className="text-xs font-bold text-primary uppercase tracking-widest">Nasıl Bağlanırım?</p>
+                          <div className="space-y-3 text-left">
+                            {[
+                              "Aeon Academy uygulamasını App Store veya Play Store'dan indirin.",
+                              "Uygulamayı açın ve 'Cihaz Eşle' seçeneğine dokunun.",
+                              "Ekranda gördüğünüz QR kodu taratın."
+                            ].map((step, i) => (
+                              <div key={i} className="flex gap-3">
+                                <span className="w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] flex-shrink-0 flex items-center justify-center font-bold">{i+1}</span>
+                                <p className="text-xs text-on-surface-variant font-medium">{step}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => toastSuccess('Doğrulama kodu SMS olarak gönderildi.')}
+                          className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
+                        >
+                          KOD GÖNDER (SMS)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -549,6 +714,17 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
                   </div>
 
                   <div className="space-y-2">
+                    <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Telefon Numarası</label>
+                    <input 
+                      type="tel" 
+                      value={tempPhone}
+                      onChange={(e) => setTempPhone(e.target.value)}
+                      placeholder="+90 5XX XXX XX XX" 
+                      className="w-full bg-surface-container-low border border-outline-variant/10 rounded-2xl py-4 px-5 text-sm focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none" 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Dil Tercihi</label>
                     <div className="relative">
                       <select className="w-full bg-surface-container-low border border-outline-variant/10 rounded-2xl py-4 px-5 text-sm appearance-none outline-none">
@@ -570,7 +746,8 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
                     onUpdateProfile({
                       avatar: tempAvatarUrl,
                       name: tempName,
-                      email: tempEmail
+                      email: tempEmail,
+                      phone: tempPhone
                     });
                     toastSuccess('Değişiklikler başarıyla kaydedildi.');
                   }}
@@ -590,6 +767,66 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, onL
               </div>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 2FA Verification Modal */}
+      <AnimatePresence>
+        {isVerifyingFA && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsVerifyingFA(null)}
+              className="absolute inset-0 bg-primary/40 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-8"
+            >
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto">
+                  <Lock size={32} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-primary">Doğrulama Kodu</h4>
+                  <p className="text-xs text-on-surface-variant font-medium mt-1">
+                    {isVerifyingFA === 'sms' ? 'Telefonunuza gönderilen' : 'Authenticator uygulamanızdaki'} 6 haneli kodu girin.
+                  </p>
+                </div>
+
+                <div className="space-y-4 pt-4">
+                  <input 
+                    type="text" 
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="000000"
+                    className={`w-full text-center text-2xl font-black tracking-[0.5em] bg-surface-container-low border ${faError ? 'border-error' : 'border-outline-variant/20'} rounded-2xl py-4 focus:ring-2 focus:ring-primary/10 outline-none`}
+                  />
+                  {faError && <p className="text-xs font-bold text-error">{faError}</p>}
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setIsVerifyingFA(null)}
+                      className="py-4 bg-surface-container-high text-primary font-bold rounded-2xl text-sm"
+                    >
+                      İptal
+                    </button>
+                    <button 
+                      onClick={verifyAndEnable}
+                      className="py-4 bg-primary text-white font-bold rounded-2xl text-sm shadow-lg shadow-primary/20"
+                    >
+                      Onayla
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

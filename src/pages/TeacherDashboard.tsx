@@ -1,24 +1,63 @@
-import React, { useState, useRef } from 'react';
-import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2, Sparkles, Send, ShieldCheck, UserMinus, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Message, ClassSession } from '../types';
+import { Message, ClassSession, Student } from '../types';
 
 interface TeacherDashboardProps {
   classes: ClassSession[];
   messages: Message[];
+  students: Student[];
   setClasses: (classes: ClassSession[] | ((prev: ClassSession[]) => ClassSession[])) => void;
   onNavigate?: (tab: string) => void;
 }
 
-export default function TeacherDashboard({ classes, messages, setClasses, onNavigate }: TeacherDashboardProps) {
+export default function TeacherDashboard({ classes, messages, students, setClasses, onNavigate }: TeacherDashboardProps) {
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [isViewingReport, setIsViewingReport] = useState(false);
+  const [isTakingAttendance, setIsTakingAttendance] = useState(false);
+  const [isGeneratingAIReport, setIsGeneratingAIReport] = useState(false);
+  const [aiReportContent, setAiReportContent] = useState('');
+  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  
   const [selectedClass, setSelectedClass] = useState<ClassSession | null>(null);
   const [newClass, setNewClass] = useState({ title: '', time: '', location: '', classGroup: '' });
   const [isRinging, setIsRinging] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Initialize attendance with everyone present by default
+    const initial = {};
+    students.forEach(s => {
+      // @ts-ignore
+      initial[s.id] = true;
+    });
+    setAttendance(initial);
+  }, [students]);
+
+  const toggleAttendance = (id: string) => {
+    setAttendance(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const generateAIReport = () => {
+    setIsGeneratingAIReport(true);
+    setAiReportContent('');
+    
+    const text = "Bugünkü matematik dersinde öğrencilerin türev ve integral arasındaki ilişkiyi kavrama oranı oldukça yüksekti. Özellikle Ali ve Zeynep'in aktif katılımı dikkat çekti. Sınıfın %85'i verilen pratik problemleri başarıyla tamamladı. Gelecek ders için karmaşık sayılara giriş yapılması planlanmaktadır.";
+    
+    let i = 0;
+    const interval = setInterval(() => {
+      setAiReportContent(prev => prev + text[i]);
+      i++;
+      if (i === text.length) {
+        clearInterval(interval);
+        setIsGeneratingAIReport(false);
+      }
+    }, 30);
+  };
 
   const nextClass = classes.find(c => c.status === 'next') || classes[0];
 
@@ -124,11 +163,14 @@ export default function TeacherDashboard({ classes, messages, setClasses, onNavi
               <span className="font-semibold">Not Girişi Yap</span>
             </button>
             <button 
-              onClick={() => setIsViewingReport(true)}
+              onClick={() => {
+                setIsViewingReport(true);
+                generateAIReport();
+              }}
               className="flex items-center gap-2 px-6 py-3 bg-white text-secondary border border-secondary rounded-xl shadow-sm hover:bg-secondary/5 transition-all active:scale-95"
             >
-              <BarChart3 size={20} />
-              <span className="font-semibold">Raporları Gör</span>
+              <Sparkles size={20} className="text-secondary" />
+              <span className="font-semibold">Hızlı Rapor Oluştur</span>
             </button>
           </div>
         </div>
@@ -412,6 +454,77 @@ export default function TeacherDashboard({ classes, messages, setClasses, onNavi
         </div>
       </section>
 
+      {/* Attendance Modal */}
+      <AnimatePresence>
+        {isTakingAttendance && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTakingAttendance(false)}
+              className="absolute inset-0 bg-primary/40 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8 max-h-[85vh] flex flex-col overflow-hidden"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h4 className="text-2xl font-black text-primary">Yoklama Al</h4>
+                  <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">{selectedClass?.title || 'Ders Seçilmedi'}</p>
+                </div>
+                <button onClick={() => setIsTakingAttendance(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                {students.map((student) => (
+                  <div 
+                    key={student.id} 
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${attendance[student.id] ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/10">
+                        <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-primary">{student.name}</p>
+                        <p className="text-[10px] text-on-surface-variant font-medium">Öğrenci No: #102{student.id}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => toggleAttendance(student.id)}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${attendance[student.id] ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-red-500 text-white shadow-lg shadow-red-200'}`}
+                    >
+                      {attendance[student.id] ? <UserPlus size={20} /> : <UserMinus size={20} />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-outline-variant/10">
+                <button 
+                  onClick={() => {
+                    setIsTakingAttendance(false);
+                    setToastMessage('Yoklama başarıyla kaydedildi.');
+                    setShowNotification(true);
+                    setTimeout(() => setShowNotification(false), 3000);
+                  }}
+                  className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                >
+                  <ShieldCheck size={20} />
+                  YOKLAMAYI KAYDET
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Lesson Plan Report Modal */}
       <AnimatePresence>
         {isViewingReport && (
@@ -430,56 +543,102 @@ export default function TeacherDashboard({ classes, messages, setClasses, onNavi
               className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h4 className="text-3xl font-black text-primary">Günlük Ders Planı Raporu</h4>
-                  <p className="text-on-surface-variant font-bold mt-1 text-sm uppercase tracking-widest">{new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-secondary/10 rounded-2xl flex items-center justify-center text-secondary">
+                    <Sparkles size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-3xl font-black text-primary">Akıllı Eğitim Raporu</h4>
+                    <p className="text-on-surface-variant font-bold mt-1 text-sm uppercase tracking-widest">AI Destekli Günlük Analiz • {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</p>
+                  </div>
                 </div>
                 <button onClick={() => setIsViewingReport(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {classes.map((c, idx) => (
-                  <div key={idx} className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/10">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm">
-                          <img src={c.image} alt={c.title} className="w-full h-full object-cover" />
-                        </div>
-                        <div>
-                          <h5 className="font-bold text-primary">{c.title}</h5>
-                          <p className="text-xs text-on-surface-variant font-medium">{c.time} • {c.location}</p>
-                        </div>
-                      </div>
-                      <div className="px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold rounded-full uppercase tracking-tighter">
-                        {c.status === 'ongoing' ? 'Devam Ediyor' : c.status === 'next' ? 'Sıradaki' : 'Tamamlandı'}
-                      </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4">
+                       <Sparkles className="text-secondary/20" size={64} />
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Kazanımlar & Hedefler</p>
-                        <p className="text-sm text-on-surface-variant leading-relaxed">
-                          Öğrencilerin konu üzerindeki temel yetkinliklerini artırmak ve uygulama becerilerini geliştirmek.
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Kullanılacak Materyaller</p>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="px-2 py-1 bg-white rounded-md text-[10px] font-bold text-outline border border-outline-variant/10">Akıllı Tahta Sunumu</span>
-                          <span className="px-2 py-1 bg-white rounded-md text-[10px] font-bold text-outline border border-outline-variant/10">Çalışma Kağıtları</span>
-                          <span className="px-2 py-1 bg-white rounded-md text-[10px] font-bold text-outline border border-outline-variant/10">Laboratuvar Kitleri</span>
-                        </div>
-                      </div>
+                    <h5 className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-4">Üretilen Özet</h5>
+                    <div className="text-lg text-primary leading-relaxed font-medium min-h-[150px]">
+                      {aiReportContent}
+                      {isGeneratingAIReport && <span className="inline-block w-2 h-6 bg-secondary ml-1 animate-pulse" />}
                     </div>
                   </div>
-                ))}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-white border border-outline-variant/10 p-5 rounded-2xl shadow-sm">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
+                          <UserPlus size={18} />
+                        </div>
+                        <span className="text-sm font-bold text-primary">Katılım Oranı</span>
+                      </div>
+                      <p className="text-3xl font-black text-primary">%94</p>
+                      <p className="text-xs text-on-surface-variant mt-1">Önceki güne göre +2%</p>
+                    </div>
+                    <div className="bg-white border border-outline-variant/10 p-5 rounded-2xl shadow-sm">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 bg-secondary/10 text-secondary rounded-lg flex items-center justify-center">
+                          <BarChart3 size={18} />
+                        </div>
+                        <span className="text-sm font-bold text-primary">Anlaşılma Oranı</span>
+                      </div>
+                      <p className="text-3xl font-black text-primary">%88</p>
+                      <p className="text-xs text-on-surface-variant mt-1">Haftalık ortalamanın üzerinde</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                   <div className="bg-primary text-white p-6 rounded-3xl">
+                      <h5 className="text-xs font-bold uppercase tracking-widest mb-4 opacity-80">Alınması Gereken Aksiyonlar</h5>
+                      <div className="space-y-4">
+                        <div className="flex gap-3">
+                          <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-[10px] font-bold">1</span>
+                          </div>
+                          <p className="text-xs leading-relaxed">Veli mesajlarına yanıt ver (3 beklemede)</p>
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-[10px] font-bold">2</span>
+                          </div>
+                          <p className="text-xs leading-relaxed">Yarınki laboratuvar deneyi için malzemeleri kontrol et.</p>
+                        </div>
+                      </div>
+                   </div>
+
+                   <div className="p-6 bg-surface-container-low rounded-3xl border border-outline-variant/10">
+                      <h5 className="text-xs font-bold text-primary uppercase tracking-widest mb-4">Sınıf Dosyaları</h5>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-outline-variant/10">
+                          <FileText className="text-secondary" size={18} />
+                          <span className="text-[10px] font-bold text-primary truncate">Ders_Plani_Mat.pdf</span>
+                        </div>
+                        <button className="w-full py-3 bg-surface-container text-primary text-[10px] font-black rounded-xl hover:bg-surface-container-high transition-colors">
+                           TÜM DOSYALARI GÖR
+                        </button>
+                      </div>
+                   </div>
+                </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-outline-variant/10 flex justify-end gap-3">
-                <button className="px-6 py-3 bg-surface-container-high text-primary font-bold rounded-xl hover:bg-slate-200 transition-all">Dosya Olarak İndir (PDF)</button>
-                <button className="px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all">Raporu Paylaş</button>
+              <div className="mt-8 pt-6 border-t border-outline-variant/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-2 text-on-surface-variant">
+                  <Clock size={16} />
+                  <span className="text-xs font-medium">Son güncelleme: Az önce</span>
+                </div>
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <button className="flex-1 px-6 py-3 bg-surface-container-high text-primary font-bold rounded-xl hover:bg-slate-200 transition-all text-xs text-nowrap">PDF İndir</button>
+                  <button className="flex-1 px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all text-xs flex items-center justify-center gap-2 text-nowrap">
+                    <Send size={16} /> Velilerle Paylaş
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -644,7 +803,10 @@ export default function TeacherDashboard({ classes, messages, setClasses, onNavi
                     <Plus size={18} />
                     Materyal Ekle
                   </button>
-                  <button className="flex-1 py-3 bg-secondary text-white font-bold rounded-xl shadow-lg shadow-secondary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => setIsTakingAttendance(true)}
+                    className="flex-1 py-3 bg-secondary text-white font-bold rounded-xl shadow-lg shadow-secondary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                  >
                     <UserCheck size={18} />
                     Yoklama Al
                   </button>
@@ -665,7 +827,7 @@ export default function TeacherDashboard({ classes, messages, setClasses, onNavi
             className="fixed bottom-8 left-1/2 z-[200] bg-primary text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
           >
             <CheckCircle2 className="text-secondary" size={24} />
-            <span className="font-bold">Etkinlik başarıyla takviminize eklendi!</span>
+            <span className="font-bold">{toastMessage || 'Etkinlik başarıyla takviminize eklendi!'}</span>
           </motion.div>
         )}
       </AnimatePresence>

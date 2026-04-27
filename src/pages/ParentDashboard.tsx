@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight, BookOpen, BarChart3, CheckCircle2 } from 'lucide-react';
+import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight, BookOpen, BarChart3, CheckCircle2, UserPlus, FileText, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GRADE_UPDATES, TEACHER_COMMENTS } from '../constants';
 import { ClassSession, Message } from '../types';
@@ -7,11 +7,21 @@ import { ClassSession, Message } from '../types';
 interface ParentDashboardProps {
   classes?: ClassSession[];
   messages: Message[];
+  userName: string;
   onNavigate?: (tab: string) => void;
 }
 
-export default function ParentDashboard({ onNavigate, messages }: ParentDashboardProps) {
+export default function ParentDashboard({ onNavigate, messages, userName }: ParentDashboardProps) {
   const [showNotification, setShowNotification] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  
+  const [activities] = useState([
+    { id: 1, type: 'attendance', title: 'Yoklama Girişi', description: 'Ali bugün Matematik dersine katıldı.', time: '09:15', icon: <UserPlus className="text-green-500" size={18} /> },
+    { id: 2, type: 'grade', title: 'Yeni Not Girildi', description: 'Fizik laboratuvar raporu: 95/100', time: '11:30', icon: <TrendingUp className="text-secondary" size={18} /> },
+    { id: 3, type: 'material', title: 'Ders Materyali', description: 'Biyoloji: Hücre Bölünmesi dökümanı paylaşıldı.', time: '13:45', icon: <BookOpen className="text-primary" size={18} /> },
+    { id: 4, type: 'behavior', title: 'Öğretmen Notu', description: 'Ali grup çalışmasında liderlik gösterdi.', time: '15:20', icon: <Star className="text-orange-400" size={18} fill="currentColor" /> },
+  ]);
+
   const [chartData] = useState(() => [
     { label: 'MAT', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
     { label: 'FİZ', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
@@ -26,7 +36,7 @@ export default function ParentDashboard({ onNavigate, messages }: ParentDashboar
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h2 className="text-3xl font-extrabold text-primary tracking-tight mb-2">Hoş Geldiniz, Ahmet Bey</h2>
+        <h2 className="text-3xl font-extrabold text-primary tracking-tight mb-2">Hoş Geldiniz, {userName}</h2>
         <p className="text-on-surface-variant font-medium">Ali'nin bugünkü akademik durumu ve güncellemeleri aşağıdadır.</p>
       </motion.section>
 
@@ -205,51 +215,91 @@ export default function ParentDashboard({ onNavigate, messages }: ParentDashboar
         </div>
       </div>
 
-      {/* Daily Summary Section */}
+      {/* Detailed Recent Activities */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
         className="pt-10 border-t border-outline-variant/10"
       >
-        <h3 className="text-2xl font-bold font-headline text-primary mb-8 flex items-center gap-3">
-          <BarChart3 className="text-secondary" size={24} />
-          Günün Özeti
-        </h3>
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="text-2xl font-bold font-headline text-primary flex items-center gap-3">
+            <Activity className="text-secondary" size={24} />
+            Son Etkinlikler
+          </h3>
+          <button className="text-xs font-bold text-secondary tracking-widest uppercase hover:underline">Haftalık Döküm</button>
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex items-center gap-6 p-6 bg-surface-container-low rounded-2xl group hover:bg-surface-container-high transition-colors">
-            <div className="w-14 h-14 flex-shrink-0 bg-primary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="space-y-4">
+            {activities.slice(0, 2).map((activity) => (
+              <div key={activity.id} className="flex items-start gap-4 p-5 bg-surface-container-low rounded-2xl border border-outline-variant/5 shadow-sm group hover:bg-white hover:shadow-md transition-all">
+                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  {activity.icon}
+                </div>
+                <div className="flex-grow">
+                  <div className="flex justify-between items-start mb-1">
+                    <h5 className="font-bold text-primary">{activity.title}</h5>
+                    <span className="text-[10px] font-medium text-outline">{activity.time}</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant font-medium leading-relaxed">{activity.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            {activities.slice(2, 4).map((activity) => (
+              <div key={activity.id} className="flex items-start gap-4 p-5 bg-surface-container-low rounded-2xl border border-outline-variant/5 shadow-sm group hover:bg-white hover:shadow-md transition-all">
+                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  {activity.icon}
+                </div>
+                <div className="flex-grow">
+                  <div className="flex justify-between items-start mb-1">
+                    <h5 className="font-bold text-primary">{activity.title}</h5>
+                    <span className="text-[10px] font-medium text-outline">{activity.time}</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant font-medium leading-relaxed">{activity.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="flex items-center gap-6 p-6 bg-primary/5 rounded-2xl group hover:bg-primary/10 transition-colors border border-primary/10">
+            <div className="w-14 h-14 flex-shrink-0 bg-primary/10 rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
               <BookOpen className="text-primary" size={28} />
             </div>
             <div className="flex-grow">
-              <h5 className="font-bold text-primary text-lg">Yeni Okuma Materyalleri</h5>
-              <p className="text-sm text-on-surface-variant font-medium">Biyoloji dersi için 4 yeni kaynak paylaşıldı.</p>
+              <h5 className="font-bold text-primary text-lg">Ödev Takibi</h5>
+              <p className="text-sm text-on-surface-variant font-medium">Bu hafta tamamlanması gereken 3 ödev var.</p>
             </div>
             <button 
               onClick={() => onNavigate?.('schedule')}
-              className="px-5 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+              className="px-5 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all text-nowrap"
             >
-              Görüntüle
+              Kontrol Et
             </button>
           </div>
 
-          <div className="flex items-center gap-6 p-6 bg-surface-container-low rounded-2xl group hover:bg-surface-container-high transition-colors">
-            <div className="w-14 h-14 flex-shrink-0 bg-secondary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="flex items-center gap-6 p-6 bg-secondary/5 rounded-2xl group hover:bg-secondary/10 transition-colors border border-secondary/10">
+            <div className="w-14 h-14 flex-shrink-0 bg-secondary/10 rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
               <Bell className="text-secondary" size={28} />
             </div>
             <div className="flex-grow">
-              <h5 className="font-bold text-primary text-lg">Sınav Hatırlatması</h5>
-              <p className="text-sm text-on-surface-variant font-medium">Fizik vizesi için son 3 gün.</p>
+              <h5 className="font-bold text-primary text-lg">Haftalık Rapor</h5>
+              <p className="text-sm text-on-surface-variant font-medium">Ali'nin haftalık durum raporu hazır.</p>
             </div>
             <button 
               onClick={() => {
+                setToastMessage('Haftalık rapor e-posta adresinize gönderildi.');
                 setShowNotification(true);
                 setTimeout(() => setShowNotification(false), 3000);
               }}
-              className="px-5 py-2 bg-secondary text-white rounded-lg font-bold text-sm shadow-lg shadow-secondary/20 hover:opacity-90 transition-all"
+              className="px-5 py-2 bg-secondary text-white rounded-lg font-bold text-sm shadow-lg shadow-secondary/20 hover:opacity-90 transition-all text-nowrap"
             >
-              Takvime Ekle
+              Raporu Al
             </button>
           </div>
         </div>
@@ -265,7 +315,7 @@ export default function ParentDashboard({ onNavigate, messages }: ParentDashboar
             className="fixed bottom-8 left-1/2 z-[200] bg-primary text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
           >
             <CheckCircle2 className="text-secondary" size={24} />
-            <span className="font-bold">Etkinlik başarıyla takviminize eklendi!</span>
+            <span className="font-bold">{toastMessage || 'Etkinlik başarıyla takviminize eklendi!'}</span>
           </motion.div>
         )}
       </AnimatePresence>

@@ -30,16 +30,19 @@ export default function App() {
 
   const [userName, setUserName] = useLocalStorage<string>('userName', role === 'teacher' ? 'Ahmet Yılmaz' : 'Ahmet Demir');
   const [userEmail, setUserEmail] = useLocalStorage<string>('userEmail', role === 'teacher' ? 'ahmet@aeon.edu' : 'ahmet.veli@mail.com');
+  const [userPhone, setUserPhone] = useLocalStorage<string>('userPhone', '+90 555 123 45 67');
+  const [isDeviceLinked, setIsDeviceLinked] = useLocalStorage<boolean>('isDeviceLinked', false);
 
   const userAvatar = role === 'teacher' ? teacherAvatar : parentAvatar;
 
-  const handleUpdateProfile = (data: { avatar?: string; name?: string; email?: string }) => {
+  const handleUpdateProfile = (data: { avatar?: string; name?: string; email?: string; phone?: string }) => {
     if (data.avatar !== undefined) {
       if (role === 'teacher') setTeacherAvatar(data.avatar);
       else setParentAvatar(data.avatar);
     }
     if (data.name !== undefined) setUserName(data.name);
     if (data.email !== undefined) setUserEmail(data.email);
+    if (data.phone !== undefined) setUserPhone(data.phone);
   };
 
   const handleUpdateAvatar = (newAvatar: string) => {
@@ -76,10 +79,10 @@ export default function App() {
     switch (activeTab) {
       case 'home':
         return role === 'teacher' 
-          ? <TeacherDashboard messages={messages} classes={classes} setClasses={setClasses} onNavigate={setActiveTab} /> 
-          : <ParentDashboard messages={messages} classes={classes} onNavigate={setActiveTab} />;
+          ? <TeacherDashboard messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} /> 
+          : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} />;
       case 'portal':
-        return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} onNavigate={setActiveTab} />;
+        return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} />;
       case 'schedule':
         return <SchedulePage role={role} />;
       case 'messages':
@@ -91,6 +94,9 @@ export default function App() {
             userAvatar={userAvatar} 
             userName={userName}
             userEmail={userEmail}
+            userPhone={userPhone}
+            isDeviceLinked={isDeviceLinked}
+            setIsDeviceLinked={setIsDeviceLinked}
             onLogout={handleLogout} 
             onUpdateAvatar={handleUpdateAvatar} 
             onUpdateProfile={handleUpdateProfile}
@@ -98,8 +104,8 @@ export default function App() {
         );
       default:
         return role === 'teacher' 
-          ? <TeacherDashboard messages={messages} classes={classes} setClasses={setClasses} onNavigate={setActiveTab} /> 
-          : <ParentDashboard messages={messages} classes={classes} onNavigate={setActiveTab} />;
+          ? <TeacherDashboard messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} /> 
+          : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} />;
     }
   };
 
