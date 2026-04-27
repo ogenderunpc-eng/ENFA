@@ -1,5 +1,5 @@
-import React from 'react';
-import { Settings, LogOut, Shield, Bell, CreditCard, Award, Book, CheckCircle2, ArrowRight, ArrowLeft, Lock, Plus, History, FileText, CreditCard as CardIcon } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Settings, LogOut, Shield, Bell, CreditCard, Award, Book, CheckCircle2, ArrowRight, ArrowLeft, Lock, Plus, History, FileText, CreditCard as CardIcon, Smartphone, Camera, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { USER_STATS } from '../constants';
 import { Role } from '../types';
@@ -7,15 +7,31 @@ import { Role } from '../types';
 interface ProfilePageProps {
   role: Role;
   userAvatar: string;
+  userName: string;
+  userEmail: string;
   onLogout: () => void;
   onUpdateAvatar: (url: string) => void;
+  onUpdateProfile: (data: { avatar?: string; name?: string; email?: string }) => void;
 }
 
-export default function ProfilePage({ role, userAvatar, onLogout, onUpdateAvatar }: ProfilePageProps) {
+export default function ProfilePage({ role, userAvatar, userName, userEmail, onLogout, onUpdateAvatar, onUpdateProfile }: ProfilePageProps) {
   const [activeSetting, setActiveSetting] = React.useState<string | null>(null);
   const [showToast, setShowToast] = React.useState(false);
   const [currentPlan, setCurrentPlan] = React.useState('Aeon Pro Plus');
+  
+  // Local form states
   const [tempAvatarUrl, setTempAvatarUrl] = React.useState(userAvatar);
+  const [tempName, setTempName] = React.useState(userName);
+  const [tempEmail, setTempEmail] = React.useState(userEmail);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync with props when they change (e.g. role switch)
+  useEffect(() => {
+    setTempAvatarUrl(userAvatar);
+    setTempName(userName);
+    setTempEmail(userEmail);
+  }, [userAvatar, userName, userEmail]);
   
   // Password Change States
   const [isChangingPassword, setIsChangingPassword] = React.useState(false);
@@ -24,6 +40,20 @@ export default function ProfilePage({ role, userAvatar, onLogout, onUpdateAvatar
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [pwdError, setPwdError] = React.useState<string | null>(null);
+
+  // 2FA States
+  const [faMethods, setFaMethods] = React.useState({
+    sms: false,
+    authenticator: false
+  });
+
+  const toggle2FA = (method: 'sms' | 'authenticator') => {
+    setFaMethods(prev => {
+      const newState = { ...prev, [method]: !prev[method] };
+      return newState;
+    });
+    toastSuccess(`${method === 'sms' ? 'SMS' : 'Authenticator'} doğrulama ${!faMethods[method] ? 'aktif edildi' : 'devre dışı bırakıldı'}.`);
+  };
 
   const toastSuccess = (msg: string) => {
     console.log(msg); // Placeholder for actual toast message usage if needed
@@ -73,10 +103,10 @@ export default function ProfilePage({ role, userAvatar, onLogout, onUpdateAvatar
 
               <div>
                 <h2 className="text-2xl font-extrabold text-primary tracking-tight">
-                  {role === 'teacher' ? 'Ahmet Yılmaz' : 'Ahmet Demir'}
+                  {userName}
                 </h2>
                 <p className="text-on-surface-variant font-medium">
-                  {role === 'teacher' ? 'Matematik Bölüm Başkanı' : 'Ali Demir\'in Velisi'}
+                  {role === 'teacher' ? 'Matematik Bölüm Başkanı' : 'Veli'}
                 </p>
               </div>
             </section>
@@ -252,13 +282,47 @@ export default function ProfilePage({ role, userAvatar, onLogout, onUpdateAvatar
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <Shield size={18} className="text-outline" />
-                        <span className="font-bold text-primary text-sm">İki Faktörlü Doğrulama (2FA)</span>
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-sm font-bold text-primary uppercase tracking-wider">İki Adımlı Doğrulama</h4>
+                      
+                      <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
+                        <div className="flex items-center gap-3">
+                          <Smartphone size={18} className="text-outline" />
+                          <div className="flex flex-col">
+                            <span className="font-bold text-primary text-sm">SMS ile Doğrulama</span>
+                            <span className="text-[10px] text-on-surface-variant">Telefonunuza gelen kod ile giriş yapın</span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => toggle2FA('sms')}
+                          className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${faMethods.sms ? 'bg-secondary' : 'bg-outline-variant/30'}`}
+                        >
+                          <motion.div 
+                            animate={{ x: faMethods.sms ? 26 : 2 }}
+                            initial={false}
+                            className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                          />
+                        </button>
                       </div>
-                      <div className="w-12 h-6 bg-surface-container-high rounded-full relative p-1 cursor-pointer">
-                        <div className="w-4 h-4 bg-white rounded-full"></div>
+
+                      <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
+                        <div className="flex items-center gap-3">
+                          <Shield size={18} className="text-outline" />
+                          <div className="flex flex-col">
+                            <span className="font-bold text-primary text-sm">Authenticator Uygulaması</span>
+                            <span className="text-[10px] text-on-surface-variant">Google veya Microsoft Authenticator kullanın</span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => toggle2FA('authenticator')}
+                          className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${faMethods.authenticator ? 'bg-secondary' : 'bg-outline-variant/30'}`}
+                        >
+                          <motion.div 
+                            animate={{ x: faMethods.authenticator ? 26 : 2 }}
+                            initial={false}
+                            className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                          />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -394,54 +458,126 @@ export default function ProfilePage({ role, userAvatar, onLogout, onUpdateAvatar
             )}
 
             {activeSetting === 'settings' && (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="space-y-4">
                   <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Profil Fotoğrafı</label>
-                  <div className="flex items-center gap-6 p-4 bg-surface-container-low rounded-2xl">
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20">
-                      <img src={tempAvatarUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                    <div className="flex-1 space-y-2">
+                  <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-surface-container-low rounded-3xl border border-outline-variant/10">
+                    <div className="relative group">
+                      <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md">
+                        <img 
+                          src={tempAvatarUrl} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer" 
+                          onError={() => setTempAvatarUrl('https://ui-avatars.com/api/?name=User')}
+                        />
+                      </div>
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-secondary text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                      >
+                        <Camera size={16} />
+                      </button>
                       <input 
-                        type="text" 
-                        value={tempAvatarUrl} 
-                        onChange={(e) => setTempAvatarUrl(e.target.value)}
-                        placeholder="Fotoğraf URL'si yapıştırın..." 
-                        className="w-full bg-white border border-outline-variant/20 rounded-xl py-2 px-3 text-xs"
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setTempAvatarUrl(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
                       />
+                    </div>
+                    
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Fotoğraf Bağlantısı</p>
+                        <input 
+                          type="text" 
+                          value={tempAvatarUrl} 
+                          onChange={(e) => setTempAvatarUrl(e.target.value)}
+                          placeholder="URL yapıştırın..." 
+                          className="w-full bg-white border border-outline-variant/20 rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-primary/20 outline-none"
+                        />
+                      </div>
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => {
-                            onUpdateAvatar(tempAvatarUrl);
-                            toastSuccess('Profil fotoğrafı güncellendi.');
-                          }}
-                          className="px-3 py-1.5 bg-primary text-white text-[10px] font-bold rounded-lg shadow-sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-outline-variant/20 text-primary text-[10px] font-bold rounded-xl hover:bg-surface-container transition-colors shadow-sm"
                         >
-                          Güncelle
+                          <Upload size={14} /> Dosya Seç
                         </button>
                         <button 
                           onClick={() => setTempAvatarUrl(userAvatar)}
-                          className="px-3 py-1.5 bg-surface-container text-primary text-[10px] font-bold rounded-lg"
+                          className="px-4 py-2 bg-surface-container-high text-primary text-[10px] font-bold rounded-xl"
                         >
-                          Sıfırla
+                          Geri Al
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">E-posta Adresi</label>
-                  <input type="email" placeholder="yılmaz@aeon.edu" className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm" />
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Ad Soyad</label>
+                    <input 
+                      type="text" 
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      placeholder="Adınız Soyadınız" 
+                      className="w-full bg-surface-container-low border border-outline-variant/10 rounded-2xl py-4 px-5 text-sm focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">E-posta Adresi</label>
+                    <input 
+                      type="email" 
+                      value={tempEmail}
+                      onChange={(e) => setTempEmail(e.target.value)}
+                      placeholder="eposta@aeon.edu" 
+                      className="w-full bg-surface-container-low border border-outline-variant/10 rounded-2xl py-4 px-5 text-sm focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none" 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Dil Tercihi</label>
+                    <div className="relative">
+                      <select className="w-full bg-surface-container-low border border-outline-variant/10 rounded-2xl py-4 px-5 text-sm appearance-none outline-none">
+                        <option>Türkçe (TR)</option>
+                        <option>English (US)</option>
+                        <option>Deutsch (DE)</option>
+                      </select>
+                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <ArrowRight className="rotate-90 text-outline-variant" size={16} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Dil Tercihi</label>
-                  <select className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4">
-                    <option>Türkçe (TR)</option>
-                    <option>English (US)</option>
-                  </select>
-                </div>
-                <button className="w-full py-4 bg-primary text-white font-bold rounded-xl mt-4">Değişiklikleri Kaydet</button>
+
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    onUpdateProfile({
+                      avatar: tempAvatarUrl,
+                      name: tempName,
+                      email: tempEmail
+                    });
+                    toastSuccess('Değişiklikler başarıyla kaydedildi.');
+                  }}
+                  className="w-full py-5 bg-primary text-white font-black text-sm rounded-2xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all mt-4"
+                >
+                  DEĞİŞİKLİKLERİ KAYDET
+                </motion.button>
               </div>
             )}
 

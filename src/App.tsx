@@ -28,14 +28,22 @@ export default function App() {
   const [teacherAvatar, setTeacherAvatar] = useLocalStorage<string>('teacherAvatar', "https://lh3.googleusercontent.com/aida-public/AB6AXuDe2PJTYBt9RL9CuhjZsSLoXQiK3M9zDmFR4fyfO0G6UJgb_bJHazeXsJxYJc_zuOWpG5zOX2cBF34LsC1Qtw2xugvkmf2YEvCucosQ4VXwgsE_VS8lQOyGxVNVI8gIAfThpHh5X4d_b8YOXW7Df9W_Z0aR3M0Sf3Lv6bMWderfeg_ReOUxg8Cy8vrpfom5FXEbGCGO5Mmu8IBMcQLSxS1ht6Bq5nBZ0pJC8K1CDcEcBuH16tScV6YGnEwmoyp4EP2m95fDg_njSZV9");
   const [parentAvatar, setParentAvatar] = useLocalStorage<string>('parentAvatar', "https://lh3.googleusercontent.com/aida-public/AB6AXuDUxF_RxLpdrVDMunvdMJSIs3jqBUBF4iaRh5Oc5Z8tvGTzfr3C-wmtDCiO1z_Tj3YHJrn9vyy91mxRsbcBEOdOBZsPuN0FQ6unBFZHmlninOKvvb6FOPVCh11GiMuLUtI6LwDa16ryC8Up8PBkkxiK4T0pS5NFS7edDTtbFv1LhfjyTygN8rwNzJS9loxREO7eSxrNauqu4IkH5bu6eGGLTfC5qRxfM-U_W8JMBGkBnd8C-31CbenZJ66zX0coFdXydurTAIT3IsPD");
 
+  const [userName, setUserName] = useLocalStorage<string>('userName', role === 'teacher' ? 'Ahmet Yılmaz' : 'Ahmet Demir');
+  const [userEmail, setUserEmail] = useLocalStorage<string>('userEmail', role === 'teacher' ? 'ahmet@aeon.edu' : 'ahmet.veli@mail.com');
+
   const userAvatar = role === 'teacher' ? teacherAvatar : parentAvatar;
 
-  const handleUpdateAvatar = (newAvatar: string) => {
-    if (role === 'teacher') {
-      setTeacherAvatar(newAvatar);
-    } else {
-      setParentAvatar(newAvatar);
+  const handleUpdateProfile = (data: { avatar?: string; name?: string; email?: string }) => {
+    if (data.avatar !== undefined) {
+      if (role === 'teacher') setTeacherAvatar(data.avatar);
+      else setParentAvatar(data.avatar);
     }
+    if (data.name !== undefined) setUserName(data.name);
+    if (data.email !== undefined) setUserEmail(data.email);
+  };
+
+  const handleUpdateAvatar = (newAvatar: string) => {
+    handleUpdateProfile({ avatar: newAvatar });
   };
 
   useEffect(() => {
@@ -77,7 +85,17 @@ export default function App() {
       case 'messages':
         return <MessagesPage messages={messages} setMessages={setMessages} role={role} userAvatar={userAvatar} students={students} />;
       case 'profile':
-        return <ProfilePage role={role} userAvatar={userAvatar} onLogout={handleLogout} onUpdateAvatar={handleUpdateAvatar} />;
+        return (
+          <ProfilePage 
+            role={role} 
+            userAvatar={userAvatar} 
+            userName={userName}
+            userEmail={userEmail}
+            onLogout={handleLogout} 
+            onUpdateAvatar={handleUpdateAvatar} 
+            onUpdateProfile={handleUpdateProfile}
+          />
+        );
       default:
         return role === 'teacher' 
           ? <TeacherDashboard messages={messages} classes={classes} setClasses={setClasses} onNavigate={setActiveTab} /> 
