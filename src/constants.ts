@@ -16,12 +16,35 @@ export const COLORS = {
 };
 
 export const STUDENTS: Student[] = [
-  { id: '1', name: 'Ali Demir', number: '1024', avatar: 'https://i.pravatar.cc/150?u=ali', class: '12-A', parentName: 'Mehmet Demir' },
-  { id: '2', name: 'Ayşe Kaya', number: '1025', avatar: 'https://i.pravatar.cc/150?u=ayse', class: '12-B', parentName: 'Fatma Kaya' },
-  { id: '3', name: 'Can Özkan', number: '1026', avatar: 'https://i.pravatar.cc/150?u=can', class: '11-A', parentName: 'Ali Özkan' },
-  { id: '4', name: 'Deniz Yılmaz', number: '1027', avatar: 'https://i.pravatar.cc/150?u=deniz', class: '10-C', parentName: 'Zehra Yılmaz' },
-  { id: '5', name: 'Elif Şahin', number: '1028', avatar: 'https://i.pravatar.cc/150?u=elif', class: '12-A', parentName: 'Osman Şahin' },
-  { id: '6', name: 'Fatih Aras', number: '1029', avatar: 'https://i.pravatar.cc/150?u=fatih', class: '9-B', parentName: 'Aylin Aras' },
+  { 
+    id: '1', 
+    name: 'Ali Demir', 
+    number: '1024', 
+    avatar: 'https://i.pravatar.cc/150?u=ali', 
+    class: '12-A', 
+    parentName: 'Mehmet Demir',
+    ktsResults: [
+      { id: 'kts-1', examName: 'KTS Deneme #1', date: '15 Mart 2024', correct: 75, wrong: 15, empty: 10, score: 385.5, rankClass: 3, rankSchool: 12, rankGeneral: 450 },
+      { id: 'kts-2', examName: 'KTS Deneme #2', date: '1 Nisan 2024', correct: 82, wrong: 10, empty: 8, score: 412.2, rankClass: 1, rankSchool: 5, rankGeneral: 210 },
+      { id: 'kts-3', examName: 'KTS Deneme #3', date: '25 Nisan 2024', correct: 80, wrong: 12, empty: 8, score: 405.8, rankClass: 2, rankSchool: 8, rankGeneral: 320 },
+    ]
+  },
+  { 
+    id: '2', 
+    name: 'Ayşe Kaya', 
+    number: '1025', 
+    avatar: 'https://i.pravatar.cc/150?u=ayse', 
+    class: '12-B', 
+    parentName: 'Fatma Kaya',
+    ktsResults: [
+      { id: 'kts-1', examName: 'KTS Deneme #1', date: '15 Mart 2024', correct: 68, wrong: 22, empty: 10, score: 345.1, rankClass: 8, rankSchool: 35, rankGeneral: 1200 },
+      { id: 'kts-2', examName: 'KTS Deneme #2', date: '1 Nisan 2024', correct: 72, wrong: 18, empty: 10, score: 368.4, rankClass: 5, rankSchool: 22, rankGeneral: 850 },
+    ]
+  },
+  { id: '3', name: 'Can Özkan', number: '1026', avatar: 'https://i.pravatar.cc/150?u=can', class: '11-A', parentName: 'Ali Özkan', ktsResults: [] },
+  { id: '4', name: 'Deniz Yılmaz', number: '1027', avatar: 'https://i.pravatar.cc/150?u=deniz', class: '10-C', parentName: 'Zehra Yılmaz', ktsResults: [] },
+  { id: '5', name: 'Elif Şahin', number: '1028', avatar: 'https://i.pravatar.cc/150?u=elif', class: '12-A', parentName: 'Osman Şahin', ktsResults: [] },
+  { id: '6', name: 'Fatih Aras', number: '1029', avatar: 'https://i.pravatar.cc/150?u=fatih', class: '9-B', parentName: 'Aylin Aras', ktsResults: [] },
 ];
 
 export const RECENT_MESSAGES: Message[] = [

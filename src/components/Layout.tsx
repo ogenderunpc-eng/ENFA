@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Users, MessageSquare, User, ArrowLeftRight, Home } from 'lucide-react';
+import { Calendar, Users, MessageSquare, User, ArrowLeftRight, Home, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Role } from '../types';
 
@@ -14,11 +14,12 @@ interface LayoutProps {
 
 export default function Layout({ children, role, onSwitchRole, activeTab, setActiveTab, userAvatar }: LayoutProps) {
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'home', label: 'Ana Sayfa', icon: Home },
+    { id: 'schedule', label: 'Program', icon: Calendar },
     { id: 'portal', label: 'Portal', icon: Users },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'kts', label: 'KTS Deneme', icon: BarChart3 },
+    { id: 'messages', label: 'Mesajlar', icon: MessageSquare },
+    { id: 'profile', label: 'Profil', icon: User },
   ];
 
   return (

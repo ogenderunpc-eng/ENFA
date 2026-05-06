@@ -42,6 +42,19 @@ export interface Grade {
   date: string;
 }
 
+export interface KTSResult {
+  id: string;
+  examName: string;
+  date: string;
+  correct: number;
+  wrong: number;
+  empty: number;
+  score: number;
+  rankClass: number;
+  rankSchool: number;
+  rankGeneral: number;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -51,6 +64,7 @@ export interface Student {
   grades?: Grade[];
   class?: string;
   parentName?: string;
+  ktsResults?: KTSResult[];
 }
 
 export interface TeacherComment {

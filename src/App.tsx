@@ -13,6 +13,7 @@ import SchedulePage from './pages/SchedulePage';
 import MessagesPage from './pages/MessagesPage';
 import ProfilePage from './pages/ProfilePage';
 import PortalPage from './pages/PortalPage';
+import KTSPage from './pages/KTSPage';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { STUDENTS as INITIAL_STUDENTS, CLASSES as INITIAL_CLASSES, RECENT_MESSAGES as INITIAL_MESSAGES } from './constants';
 
@@ -83,6 +84,8 @@ export default function App() {
           : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} />;
       case 'portal':
         return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} />;
+      case 'kts':
+        return <KTSPage students={students} setStudents={setStudents} role={role} />;
       case 'schedule':
         return <SchedulePage role={role} />;
       case 'messages':
