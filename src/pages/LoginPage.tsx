@@ -85,26 +85,44 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         if (signInError.code === 'auth/operation-not-allowed') {
           throw signInError;
         }
-        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-login-credentials') {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const user = userCredential.user;
-          
-          if (selectedRole === 'teacher') {
-            await setDoc(doc(db, 'teachers', user.uid), {
-              name: email.split('@')[0],
-              role: 'teacher',
-              email: email
-            });
-          } else {
-            await setDoc(doc(db, 'students', user.uid), {
-              name: email.split('@')[0],
-              role: 'parent',
-              email: email,
-              number: Math.floor(Math.random() * 9000 + 1000).toString(),
-              grades: []
-            });
+        
+        // Check if we should try to create a new user (auto-registration)
+        const isUserNotFound = [
+          'auth/user-not-found', 
+          'auth/invalid-credential', 
+          'auth/invalid-login-credentials'
+        ].includes(signInError.code);
+
+        if (isUserNotFound) {
+          try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            if (selectedRole === 'teacher') {
+              await setDoc(doc(db, 'teachers', user.uid), {
+                name: email.split('@')[0],
+                role: 'teacher',
+                email: email
+              });
+            } else {
+              await setDoc(doc(db, 'students', user.uid), {
+                name: email.split('@')[0],
+                role: 'parent',
+                email: email,
+                number: Math.floor(Math.random() * 9000 + 1000).toString(),
+                grades: []
+              });
+            }
+            await updateProfile(user, { displayName: email.split('@')[0] });
+          } catch (signUpError: any) {
+            // If email is already in use, it means the first sign-in failed due to wrong password
+            if (signUpError.code === 'auth/email-already-in-use') {
+              setErrorMessage('Hatalı şifre. Lütfen tekrar deneyin.');
+              setError(true);
+            } else {
+              throw signUpError;
+            }
           }
-          await updateProfile(user, { displayName: email.split('@')[0] });
         } else {
           throw signInError;
         }

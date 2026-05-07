@@ -49,6 +49,12 @@ service cloud.firestore {
                data.title is string && data.title.size() <= 200;
     }
 
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['studentId', 'date', 'status']) &&
+             data.studentId is string && data.date is string &&
+             data.status is string && (data.status == 'present' || data.status == 'absent');
+    }
+
     // --- Collections ---
 
     match /students/{studentId} {
@@ -68,6 +74,12 @@ service cloud.firestore {
     match /classes/{classId} {
       allow read: if isSignedIn();
       allow write: if isTeacher() && isValidClass(incoming());
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create, update: if isTeacher() && isValidAttendance(incoming());
+      allow delete: if isTeacher();
     }
 
     match /teachers/{teacherId} {

@@ -71,6 +71,19 @@
         "status": { "type": "string", "enum": ["ongoing", "next"] }
       },
       "required": ["title", "time"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily attendance record for a student.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["present", "absent"] },
+        "classId": { "type": "string" }
+      },
+      "required": ["studentId", "date", "status"]
     }
   },
   "firestore": {
@@ -85,6 +98,10 @@
     "/classes/{classId}": {
       "schema": "Class",
       "description": "Schedule of classes."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Daily attendance records."
     },
     "/yoneticiler/{adminId}": {
       "schema": "Message",

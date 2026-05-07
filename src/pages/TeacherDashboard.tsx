@@ -3,7 +3,16 @@ import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock
 import { motion, AnimatePresence } from 'motion/react';
 import { Message, ClassSession, Student } from '../types';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, writeBatch, onSnapshot } from 'firebase/firestore';
+
+interface AttendanceRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  date: string;
+  status: 'present' | 'absent';
+  classId: string;
+}
 
 interface TeacherDashboardProps {
   classes: ClassSession[];
@@ -17,9 +26,12 @@ export default function TeacherDashboard({ classes, messages, students, setClass
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [isViewingReport, setIsViewingReport] = useState(false);
   const [isTakingAttendance, setIsTakingAttendance] = useState(false);
+  const [isManagingAttendance, setIsManagingAttendance] = useState(false);
   const [isGeneratingAIReport, setIsGeneratingAIReport] = useState(false);
   const [aiReportContent, setAiReportContent] = useState('');
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>([]);
+  const [isSavingAttendance, setIsSavingAttendance] = useState(false);
   
   const [selectedClass, setSelectedClass] = useState<ClassSession | null>(null);
   const [newClass, setNewClass] = useState({ title: '', time: '', location: '', classGroup: '' });
@@ -39,6 +51,23 @@ export default function TeacherDashboard({ classes, messages, students, setClass
     });
     setAttendance(initial);
   }, [students]);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const q = query(collection(db, 'attendance'), where('date', '==', today));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const records: AttendanceRecord[] = [];
+      snapshot.forEach(doc => {
+        records.push({ id: doc.id, ...doc.data() } as AttendanceRecord);
+      });
+      setAttendanceHistory(records);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'attendance');
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const toggleAttendance = (id: string) => {
     setAttendance(prev => ({ ...prev, [id]: !prev[id] }));
@@ -140,6 +169,51 @@ export default function TeacherDashboard({ classes, messages, students, setClass
     }
   };
 
+  const handleSaveAttendance = async () => {
+    if (!selectedClass) return;
+    
+    setIsSavingAttendance(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const batch = writeBatch(db);
+      
+      students.forEach(student => {
+        const attendanceId = `${student.id}_${today}_${selectedClass.id}`;
+        const ref = doc(db, 'attendance', attendanceId);
+        batch.set(ref, {
+          studentId: student.id,
+          studentName: student.name,
+          date: today,
+          status: attendance[student.id] ? 'present' : 'absent',
+          classId: selectedClass.id
+        });
+      });
+      
+      await batch.commit();
+      setIsTakingAttendance(false);
+      setToastMessage('Yoklama başarıyla kaydedildi.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'attendance');
+    } finally {
+      setIsSavingAttendance(false);
+    }
+  };
+
+  const handleDeleteAttendanceRecord = async (id: string) => {
+    if (!window.confirm('Bu yoklama kaydını silmek istediğinize emin misiniz?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'attendance', id));
+      setToastMessage('Yoklama kaydı silindi.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `attendance/${id}`);
+    }
+  };
+
   return (
     <div className="space-y-12">
       {/* Welcome & Fast Actions */}
@@ -153,9 +227,16 @@ export default function TeacherDashboard({ classes, messages, students, setClass
             <h2 className="text-4xl font-extrabold text-primary leading-tight">Eğitim portalı bugün <br/>sizin için hazır.</h2>
           </motion.div>
           
-          <div className="flex flex-wrap gap-3">
-            <button 
-              onClick={() => setSelectedClass(classes.find(c => c.status === 'ongoing') || classes.find(c => c.status === 'next') || classes[0])}
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={() => setIsManagingAttendance(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-error/10 text-error rounded-xl shadow-sm hover:bg-error/20 transition-all active:scale-95"
+              >
+                <Clock size={20} />
+                <span className="font-semibold">Yoklama Yönetimi</span>
+              </button>
+              <button 
+                onClick={() => setSelectedClass(classes.find(c => c.status === 'ongoing') || classes.find(c => c.status === 'next') || classes[0])}
               className="flex items-center gap-2 px-6 py-3 bg-secondary text-white rounded-xl shadow-lg shadow-secondary/20 hover:scale-[1.02] transition-transform active:scale-95"
             >
               <FileText size={20} />
@@ -514,16 +595,86 @@ export default function TeacherDashboard({ classes, messages, students, setClass
 
               <div className="mt-6 pt-4 border-t border-outline-variant/10">
                 <button 
-                  onClick={() => {
-                    setIsTakingAttendance(false);
-                    setToastMessage('Yoklama başarıyla kaydedildi.');
-                    setShowNotification(true);
-                    setTimeout(() => setShowNotification(false), 3000);
-                  }}
+                  onClick={handleSaveAttendance}
+                  disabled={isSavingAttendance}
                   className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
                 >
-                  <ShieldCheck size={20} />
+                  {isSavingAttendance ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
                   YOKLAMAYI KAYDET
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Attendance Management Modal */}
+      <AnimatePresence>
+        {isManagingAttendance && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsManagingAttendance(false)}
+              className="absolute inset-0 bg-primary/40 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 max-h-[85vh] flex flex-col overflow-hidden"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h4 className="text-2xl font-black text-primary">Yoklama Yönetimi</h4>
+                  <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Bugünkü Kayıtlar ({attendanceHistory.length})</p>
+                </div>
+                <button onClick={() => setIsManagingAttendance(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                {attendanceHistory.length > 0 ? (
+                  attendanceHistory.map((record) => (
+                    <div 
+                      key={record.id} 
+                      className="flex items-center justify-between p-4 rounded-2xl border border-outline-variant/10 bg-surface-container-lowest"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${record.status === 'present' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                          {record.status === 'present' ? <CheckCircle2 size={20} /> : <X size={20} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-primary">{record.studentName}</p>
+                          <p className="text-[10px] text-on-surface-variant font-medium">
+                            {classes.find(c => c.id === record.classId)?.title || 'Genel Ders'}
+                          </p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteAttendanceRecord(record.id)}
+                        className="p-2 text-error hover:bg-error/10 rounded-xl transition-all"
+                      >
+                        <UserMinus size={20} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <Clock size={48} className="mx-auto text-outline-variant mb-4" />
+                    <p className="text-on-surface-variant font-medium">Bugün henüz yoklama kaydı bulunmuyor.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-outline-variant/10">
+                <button 
+                  onClick={() => setIsManagingAttendance(false)}
+                  className="w-full py-4 bg-surface-container-high text-primary font-black rounded-2xl hover:bg-slate-200 transition-all"
+                >
+                  KAPAT
                 </button>
               </div>
             </motion.div>
