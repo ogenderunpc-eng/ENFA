@@ -2,18 +2,45 @@ import React, { useState, useEffect } from 'react';
 import { GraduationCap, Users, ArrowRight, Sparkles, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Role } from '../types';
+import { auth, db } from '../lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signInAnonymously } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 interface LoginPageProps {
   onLogin: (role: Role) => void;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
-  const [view, setView] = useState<'selection' | 'login' | '2fa'>('selection');
+  const [view, setView] = useState<'selection' | 'login'>('selection');
   const [selectedRole, setSelectedRole] = useState<Role>('teacher');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const fillTeacherCredentials = () => {
+    setErrorMessage(null);
+    setEmail('ogretmen@example.com');
+    setPassword('password123');
+    setSelectedRole('teacher');
+  };
+
+  const fillStudentCredentials = () => {
+    setErrorMessage(null);
+    setEmail('ogrenci@example.com');
+    setPassword('password123');
+    setSelectedRole('student');
+  };
   const [error, setError] = useState(false);
   const [faCode, setFaCode] = useState('');
   const [faError, setFaError] = useState(false);
+
+  const handleRoleSelect = (role: Role) => {
+    setSelectedRole(role);
+    setError(false);
+    setErrorMessage(null);
+    setView('login');
+  };
 
   useEffect(() => {
     // Check for magic link auto-login (from QR scan)
@@ -24,40 +51,73 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     if (magicLink === 'true' && roleParam) {
       // Clear params and login
       window.history.replaceState({}, document.title, window.location.pathname);
-      onLogin(roleParam);
+      
+      const performMagicLogin = async () => {
+        try {
+          if (roleParam === 'teacher') {
+            await signInWithEmailAndPassword(auth, 'ogretmen@example.com', 'password123');
+          } else {
+            // No student test account by default, sign in anonymously or just trust the role
+            await signInAnonymously(auth);
+          }
+          onLogin(roleParam);
+        } catch (err) {
+          console.error('Magic link login failed:', err);
+          // Fallback to manual login
+          onLogin(roleParam);
+        }
+      };
+      
+      performMagicLogin();
     }
   }, [onLogin]);
 
-  const handleRoleSelect = (role: Role) => {
-    setSelectedRole(role);
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
     setError(false);
-    setView('login');
-  };
-
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const storedPassword = localStorage.getItem('systemPassword') || '1212';
-    if (password === storedPassword) {
-      const isSmsEnabled = localStorage.getItem('2fa_sms') === 'true';
-      const isAuthEnabled = localStorage.getItem('2fa_authenticator') === 'true';
-      
-      if (isSmsEnabled || isAuthEnabled) {
-        setView('2fa');
-      } else {
-        onLogin(selectedRole);
+    setErrorMessage(null);
+    
+    try {
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (signInError: any) {
+        if (signInError.code === 'auth/operation-not-allowed') {
+          throw signInError;
+        }
+        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-login-credentials') {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          
+          if (selectedRole === 'teacher') {
+            await setDoc(doc(db, 'teachers', user.uid), {
+              name: email.split('@')[0],
+              role: 'teacher',
+              email: email
+            });
+          } else {
+            await setDoc(doc(db, 'students', user.uid), {
+              name: email.split('@')[0],
+              role: 'parent',
+              email: email,
+              number: Math.floor(Math.random() * 9000 + 1000).toString(),
+              grades: []
+            });
+          }
+          await updateProfile(user, { displayName: email.split('@')[0] });
+        } else {
+          throw signInError;
+        }
       }
-    } else {
-      setError(true);
-    }
-  };
-
-  const handle2FASubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Default verification code is 123456
-    if (faCode === '123456') {
-      onLogin(selectedRole);
-    } else {
-      setFaError(true);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setErrorMessage('Firebase Konsolu üzerinden "Email/Password" giriş yöntemini etkinleştirmeniz gerekmektedir.');
+      } else {
+        setError(true);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,7 +132,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           {/* Left Side: Visual & Branding */}
           <div className="lg:col-span-5 bg-login-gradient relative p-12 flex flex-col justify-between text-white">
             <div className="z-10">
-              <h1 className="font-headline text-3xl font-extrabold tracking-tight mb-4">Aeon Academy</h1>
+              <h1 className="font-headline text-3xl font-extrabold tracking-tight mb-4">OGE Academy</h1>
               <p className="text-white/80 text-lg font-light leading-relaxed max-w-xs">
                 Geleceğin eğitim vizyonuyla, akademik mükemmelliği ve kişisel gelişimi tek bir çatı altında buluşturuyoruz.
               </p>
@@ -153,7 +213,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     </button>
                   </div>
                 </motion.div>
-              ) : view === 'login' ? (
+              ) : (
                 <motion.div 
                   key="login"
                   initial={{ opacity: 0, x: 20 }}
@@ -183,7 +243,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                       <input 
                         className="w-full bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-primary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
                         type="email" 
-                        placeholder={selectedRole === 'teacher' ? 'ogretmen@aeonacademy.com' : 'veli@aeonacademy.com'}
+                        placeholder={selectedRole === 'teacher' ? 'ogretmen@ogeacademy.com' : 'veli@ogeacademy.com'}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         required
                       />
                     </div>
@@ -213,92 +275,43 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                           Hatalı şifre. Lütfen tekrar deneyin.
                         </motion.p>
                       )}
-                    </div>
-
-                    <div className="flex flex-col gap-3 pt-4">
-                      <button 
-                        className={`w-full ${selectedRole === 'teacher' ? 'bg-primary' : 'bg-secondary'} text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2`} 
-                        type="submit"
-                      >
-                        Sisteme Giriş Yap
-                        <ArrowRight size={18} />
-                      </button>
-                    </div>
-                  </form>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key="2fa"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="w-full"
-                >
-                  <button 
-                    onClick={() => {
-                      setView('login');
-                      setFaCode('');
-                      setFaError(false);
-                    }}
-                    className="flex items-center gap-2 text-sm font-bold text-secondary mb-8 hover:underline"
-                  >
-                    <ArrowRight className="rotate-180" size={16} />
-                    Geri Dön
-                  </button>
-
-                  <header className="mb-10 text-center">
-                    <div className="w-20 h-20 bg-secondary/10 text-secondary rounded-3xl flex items-center justify-center mx-auto mb-6">
-                      <Sparkles size={40} />
-                    </div>
-                    <h2 className="font-headline text-4xl font-bold text-primary mb-2 tracking-tight">
-                      İki Adımlı Doğrulama
-                    </h2>
-                    <p className="text-on-surface-variant">
-                      Hesabınızı korumak için 2FA kodu gereklidir.
-                    </p>
-                  </header>
-
-                  {/* 2FA Form */}
-                  <form className="space-y-6" onSubmit={handle2FASubmit}>
-                    <div className="space-y-4">
-                      <p className="text-center text-xs font-bold text-primary uppercase tracking-widest bg-surface-container-high py-2 rounded-lg">
-                        {localStorage.getItem('2fa_sms') === 'true' ? 'SMS KODUNU GİRİN' : 'AUTHENTICATOR KODUNU GİRİN'}
-                      </p>
-                      <input 
-                        className={`w-full bg-surface-container-high border-none rounded-2xl focus:ring-2 ${faError ? 'focus:ring-error ring-2 ring-error' : 'focus:ring-primary'} py-5 text-center text-3xl font-black tracking-[0.5em] text-primary placeholder:text-outline-variant/30 transition-all outline-none`} 
-                        type="text" 
-                        maxLength={6}
-                        placeholder="000000"
-                        value={faCode}
-                        onChange={(e) => {
-                          setFaCode(e.target.value.replace(/[^0-9]/g, ''));
-                          if (faError) setFaError(false);
-                        }}
-                        autoFocus
-                        required
-                      />
-                      {faError && (
+                      {errorMessage && (
                         <motion.p 
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="text-center text-xs font-bold text-error mt-2"
+                          className="text-xs font-bold text-error mt-2 ml-1 bg-error/5 p-3 rounded-lg border border-error/10"
                         >
-                          Hatalı doğrulama kodu. (İpucu: 123456)
+                          {errorMessage}
                         </motion.p>
                       )}
                     </div>
 
                     <div className="flex flex-col gap-3 pt-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button 
+                          onClick={fillTeacherCredentials}
+                          type="button"
+                          className="bg-surface-container-low text-primary text-[10px] font-bold py-2 rounded-xl border border-outline-variant/10 hover:bg-surface-container-high transition-all"
+                        >
+                          Öğretmen Test Hesabı
+                        </button>
+                        <button 
+                          onClick={fillStudentCredentials}
+                          type="button"
+                          className="bg-surface-container-low text-primary text-[10px] font-bold py-2 rounded-xl border border-outline-variant/10 hover:bg-surface-container-high transition-all"
+                        >
+                          Öğrenci Test Hesabı
+                        </button>
+                      </div>
+
                       <button 
-                        className="w-full bg-primary text-white font-headline font-bold py-5 rounded-2xl shadow-xl shadow-primary/20 hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2" 
+                        className={`w-full ${selectedRole === 'teacher' ? 'bg-primary' : 'bg-secondary'} text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50`} 
                         type="submit"
+                        disabled={loading}
                       >
-                        Doğrula ve Giriş Yap
-                        <ArrowRight size={20} />
+                        {loading ? 'Giriş Yapılıyor...' : 'Sisteme Giriş Yap'}
+                        {!loading && <ArrowRight size={18} />}
                       </button>
-                      <p className="text-center text-[10px] text-on-surface-variant font-medium mt-4">
-                        Sorun mu yaşıyorsunuz? <button type="button" className="text-secondary font-bold hover:underline">Destek ekibiyle iletişime geçin</button>
-                      </p>
                     </div>
                   </form>
                 </motion.div>
@@ -310,7 +323,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
       <footer className="w-full py-8 text-center border-t border-outline-variant/15">
         <p className="text-xs text-on-surface-variant/60 font-medium tracking-wide">
-          © 2024 Aeon Academy Bilgi Sistemleri. Tüm hakları saklıdır.
+          © 2024 OGE Academy Bilgi Sistemleri. Tüm hakları saklıdır.
         </p>
       </footer>
 

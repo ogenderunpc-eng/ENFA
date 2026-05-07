@@ -2,18 +2,23 @@ import React, { useState } from 'react';
 import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight, BookOpen, BarChart3, CheckCircle2, UserPlus, FileText, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GRADE_UPDATES, TEACHER_COMMENTS } from '../constants';
-import { ClassSession, Message } from '../types';
+import { Student, ClassSession, Message } from '../types';
 
 interface ParentDashboardProps {
   classes?: ClassSession[];
   messages: Message[];
   userName: string;
   onNavigate?: (tab: string) => void;
+  students?: Student[];
 }
 
-export default function ParentDashboard({ onNavigate, messages, userName }: ParentDashboardProps) {
+export default function ParentDashboard({ onNavigate, messages, userName, students = [] }: ParentDashboardProps) {
   const [showNotification, setShowNotification] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  
+  // Real child data (assuming first student for demo)
+  const child = students[0];
+  const realGrades = child?.grades || [];
   
   const [activities] = useState([
     { id: 1, type: 'attendance', title: 'Yoklama Girişi', description: 'Ali bugün Matematik dersine katıldı.', time: '09:15', icon: <UserPlus className="text-green-500" size={18} /> },
@@ -22,13 +27,11 @@ export default function ParentDashboard({ onNavigate, messages, userName }: Pare
     { id: 4, type: 'behavior', title: 'Öğretmen Notu', description: 'Ali grup çalışmasında liderlik gösterdi.', time: '15:20', icon: <Star className="text-orange-400" size={18} fill="currentColor" /> },
   ]);
 
-  const [chartData] = useState(() => [
-    { label: 'MAT', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
-    { label: 'FİZ', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
-    { label: 'KİM', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
-    { label: 'EDEB', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
-    { label: 'TAR', ali: Math.floor(Math.random() * 40) + 60, sinif: Math.floor(Math.random() * 30) + 50 },
-  ]);
+  const chartData = realGrades.map(g => ({
+    label: g.subject.substring(0, 4).toUpperCase(),
+    value: g.value,
+    target: 85
+  }));
 
   return (
     <div className="space-y-10">
@@ -68,10 +71,10 @@ export default function ParentDashboard({ onNavigate, messages, userName }: Pare
           </button>
         </motion.div>
 
-        {/* Grade Update Snapshot */}
-        {GRADE_UPDATES.map((update) => (
+        {/* Grade Update Snapshot (Real Data) */}
+        {realGrades.slice(-1).map((update, idx) => (
           <motion.div 
-            key={update.id}
+            key={idx}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -80,18 +83,31 @@ export default function ParentDashboard({ onNavigate, messages, userName }: Pare
             <div>
               <div className="flex justify-between items-start mb-4">
                 <Star className="text-secondary-container" size={32} fill="currentColor" />
-                <span className="bg-white/10 text-[10px] px-2 py-1 rounded-full uppercase tracking-widest font-bold">Güncel Not</span>
+                <span className="bg-white/10 text-[10px] px-2 py-1 rounded-full uppercase tracking-widest font-bold">Yeni Not Girildi</span>
               </div>
-              <h3 className="text-2xl font-headline font-bold mb-1">{update.subject}: {update.grade}</h3>
-              <p className="text-white/60 text-sm">{update.description}</p>
+              <h3 className="text-2xl font-headline font-bold mb-1">{update.subject}: {update.value}</h3>
+              <p className="text-white/60 text-sm">{update.date} tarihinde eklendi.</p>
             </div>
             <div className="mt-6 pt-4 border-t border-white/10">
-              <p className="text-xs text-white/60">Sınıf Ortalaması: {update.average}</p>
+              <p className="text-xs text-white/60">Başarı Durumu: {update.value > 85 ? 'Mükemmel' : update.value > 70 ? 'İyi' : 'Geliştirilmeli'}</p>
             </div>
           </motion.div>
         ))}
 
-        {/* Performance Chart */}
+        {realGrades.length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="col-span-12 md:col-span-4 bg-surface-container-low rounded-xl p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-outline-variant/30"
+          >
+            <BookOpen className="text-primary/20 mb-3" size={32} />
+            <p className="text-sm font-bold text-primary">Henüz Not Girilmedi</p>
+            <p className="text-[10px] text-on-surface-variant font-medium">Öğretmen not girdiğinde burada görünecektir.</p>
+          </motion.div>
+        )}
+
+        {/* Performance Chart (Real Data) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -101,42 +117,50 @@ export default function ParentDashboard({ onNavigate, messages, userName }: Pare
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <div>
                 <h3 className="text-xl font-bold text-primary mb-1">Ders Bazlı Gelişim</h3>
-                <p className="text-sm text-on-surface-variant">Son 4 Haftalık Performans Analizi</p>
+                <p className="text-sm text-on-surface-variant">Gerçek Zamanlı Performans Analizi</p>
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex gap-4">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-secondary"></span>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Ali</span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">{child?.name?.split(' ')[0] || 'Öğrenci'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-outline-variant"></span>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Sınıf</span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Hedef</span>
                   </div>
                 </div>
               </div>
             </div>
           
-          <div className="h-64 flex items-end justify-between gap-4 px-4">
-            {chartData.map((data, i) => (
-              <div key={data.label} className="flex-1 flex flex-col items-center gap-2">
+          <div className="h-64 flex items-end justify-start gap-6 px-4 overflow-x-auto no-scrollbar pb-2">
+            {chartData.length > 0 ? chartData.map((data, i) => (
+              <div key={i} className="min-w-[50px] flex-1 flex flex-col items-center gap-2">
                 <div className="w-full flex items-end justify-center gap-1 h-full">
                   <motion.div 
                     initial={{ height: 0 }}
-                    animate={{ height: `${data.sinif}%` }}
+                    animate={{ height: `85%` }}
                     transition={{ duration: 1, delay: 0.4 + i * 0.1 }}
-                    className="w-4 bg-outline-variant/30 rounded-t-sm" 
+                    className="w-3 bg-outline-variant/30 rounded-t-sm" 
                   />
                   <motion.div 
                     initial={{ height: 0 }}
-                    animate={{ height: `${data.ali}%` }}
+                    animate={{ height: `${data.value}%` }}
                     transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
-                    className="w-4 bg-secondary rounded-t-sm" 
+                    className="w-3 bg-secondary rounded-t-sm" 
                   />
                 </div>
-                <span className="text-[10px] font-bold text-on-surface-variant">{data.label}</span>
+                <span className="text-[9px] font-black text-primary truncate w-full text-center uppercase tracking-tighter">
+                  {data.label}
+                </span>
+                <span className="text-[10px] font-bold text-secondary">{data.value}</span>
               </div>
-            ))}
+            )) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-center opacity-30">
+                <BarChart3 size={48} className="mb-2" />
+                <p className="text-xs font-bold uppercase tracking-widest">Gösterilecek veri yok</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -191,7 +215,7 @@ export default function ParentDashboard({ onNavigate, messages, userName }: Pare
                   </p>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden">
-                      <img className="w-full h-full object-cover" src={comment.avatar} alt={comment.teacherName} referrerPolicy="no-referrer" />
+                      <img className="w-full h-full object-cover" src={comment.avatar || `https://ui-avatars.com/api/?name=${comment.teacherName}`} alt={comment.teacherName} referrerPolicy="no-referrer" />
                     </div>
                     <span className="text-[11px] font-bold text-on-surface-variant">{comment.teacherName}, {comment.subject}</span>
                   </div>

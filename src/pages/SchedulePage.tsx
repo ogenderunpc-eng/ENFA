@@ -115,7 +115,7 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
             <div className="absolute inset-0 z-0">
               <img 
                 className="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" 
-                src={ongoingClass.image} 
+                src={ongoingClass.image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800'} 
                 alt={ongoingClass.title}
                 referrerPolicy="no-referrer"
               />
@@ -273,7 +273,7 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
             >
               <div className="h-48 relative">
                 <img 
-                  src={selectedClass.image} 
+                  src={selectedClass.image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800'} 
                   alt={selectedClass.title} 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

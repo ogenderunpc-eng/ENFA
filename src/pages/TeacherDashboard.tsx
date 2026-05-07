@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2, Sparkles, Send, ShieldCheck, UserMinus, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Message, ClassSession, Student } from '../types';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 interface TeacherDashboardProps {
   classes: ClassSession[];
@@ -116,7 +118,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
     }, 20000);
   };
 
-  const handleAddClass = (e: React.FormEvent) => {
+  const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClass.title || !newClass.time) return;
 
@@ -129,9 +131,13 @@ export default function TeacherDashboard({ classes, messages, students, setClass
       image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=800',
     };
 
-    setClasses(prev => [...prev, session]);
-    setNewClass({ title: '', time: '', location: '', classGroup: '' });
-    setIsAddingClass(false);
+    try {
+      await addDoc(collection(db, 'classes'), session);
+      setNewClass({ title: '', time: '', location: '', classGroup: '' });
+      setIsAddingClass(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'classes');
+    }
   };
 
   return (
@@ -203,7 +209,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               className="min-w-[280px] bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/10 group cursor-pointer hover:shadow-md transition-shadow"
             >
               <div className="h-28 relative">
-                <img src={c.image} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                <img src={c.image || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=800'} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-2 left-4">
                   <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">{c.time}</span>
@@ -356,7 +362,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
             <div className="relative w-full md:w-1/3 aspect-video md:aspect-square rounded-2xl overflow-hidden shadow-2xl">
               <img 
                 className="w-full h-full object-cover" 
-                src={nextClass.image} 
+                src={nextClass.image || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=800'} 
                 alt={nextClass.title}
                 referrerPolicy="no-referrer"
               />
@@ -489,7 +495,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/10">
-                        <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img src={student.avatar || `https://i.pravatar.cc/150?u=${student.name}`} alt={student.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-primary">{student.name}</p>

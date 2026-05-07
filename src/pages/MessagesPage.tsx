@@ -1,62 +1,105 @@
-import React, { useState } from 'react';
-import { Search, Plus, MoreVertical, Send, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Plus, MoreVertical, Send, ArrowLeft, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Message, Role, Student } from '../types';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 interface MessagesPageProps {
   messages: Message[];
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
   role: Role;
+  userName: string;
   userAvatar: string;
   students: Student[];
 }
 
-export default function MessagesPage({ messages, setMessages, role, userAvatar, students }: MessagesPageProps) {
+export default function MessagesPage({ messages, setMessages, role, userName, userAvatar, students }: MessagesPageProps) {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [targetStudent, setTargetStudent] = useState<Student | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const currentChat = messages.find(m => m.id === selectedChat);
-
-  const handleSendMessage = (text?: string) => {
-    const messageContent = text || replyText;
-    if (!messageContent.trim()) return;
-
-    const newMessageBody = {
-      sender: 'Siz',
-      senderRole: role === 'teacher' ? 'Öğretmen' : 'Veli',
-      content: messageContent,
-      avatar: userAvatar,
-      recipientId: isAddingNew ? targetStudent?.id : undefined
-    };
-
-    fetch('/api/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newMessageBody),
-    })
-    .then(res => res.json())
-    .then(savedMessage => {
-      if (isAddingNew) {
-        setMessages(prev => [savedMessage, ...prev]);
-        setIsAddingNew(false);
-        setTargetStudent(null);
-      } else {
-        setMessages(prev => [savedMessage, ...prev.filter(m => m.id !== selectedChat)]);
-      }
-      setReplyText('');
-      setSelectedChat(null);
-    })
-    .catch(err => console.error('Error sending message:', err));
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const filteredMessages = messages.filter(m => 
-    (m.sender?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
-    (m.content?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    if (selectedChat) {
+      scrollToBottom();
+    }
+  }, [selectedChat, messages]);
+
+  const myId = auth.currentUser?.uid;
+
+  // Group messages into conversations based on the "other" person
+  const chatsMap = messages.reduce((acc, msg) => {
+    // If I'm the sender, the "partner" is the recipient. If I'm the recipient, the partner is the sender.
+    const partnerId = msg.senderId === myId ? msg.recipientId : msg.senderId;
+    if (!partnerId) return acc;
+
+    if (!acc[partnerId]) {
+      acc[partnerId] = [];
+    }
+    acc[partnerId].push(msg);
+    return acc;
+  }, {} as Record<string, Message[]>);
+
+  // Convert to array of unique conversations with latest message
+  const chatList = Object.entries(chatsMap).map(([partnerId, chatMessages]) => {
+    const sorted = [...chatMessages].sort((a, b) => 
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+    const latest = sorted[0];
+    return {
+      partnerId,
+      latest,
+      allMessages: sorted.reverse() // Chrome order for display
+    };
+  }).sort((a, b) => 
+    new Date(b.latest.createdAt || 0).getTime() - new Date(a.latest.createdAt || 0).getTime()
+  );
+
+  const activeChat = chatList.find(c => c.partnerId === selectedChat);
+
+  const handleSendMessage = async (text?: string) => {
+    const messageContent = text || replyText;
+    if (!messageContent.trim() || isSending) return;
+
+    setIsSending(true);
+
+    const newMessageBody = {
+      senderId: myId,
+      sender: userName || 'İsimsiz Kullanıcı',
+      senderRole: role === 'teacher' ? 'Öğretmen' : (role === 'student' ? 'Öğrenci' : 'Veli'),
+      content: messageContent,
+      avatar: userAvatar,
+      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
+      recipientId: isAddingNew ? (targetStudent?.id || 'school_admin') : (selectedChat || 'school_admin')
+    };
+
+    try {
+      await addDoc(collection(db, 'messages'), newMessageBody);
+      if (isAddingNew) {
+        setIsAddingNew(false);
+        setTargetStudent(null);
+        setSelectedChat(newMessageBody.recipientId);
+      }
+      setReplyText('');
+    } catch (error) {
+      console.error('Mesaj gönderim hatası:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const filteredChatList = chatList.filter(chat => 
+    (chat.latest.sender?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+    (chat.latest.content?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -72,10 +115,10 @@ export default function MessagesPage({ messages, setMessages, role, userAvatar, 
           >
             <header>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-extrabold text-primary tracking-tight">Mesajlar</h2>
+                <h2 className="text-3xl font-extrabold text-primary tracking-tight">Enderun Chat 💬</h2>
                 <button 
                   onClick={() => setIsAddingNew(true)}
-                  className="w-10 h-10 bg-secondary text-white rounded-full flex items-center justify-center shadow-lg shadow-secondary/20 active:scale-95 transition-all"
+                  className="w-10 h-10 bg-secondary text-white rounded-full flex items-center justify-center shadow-lg shadow-secondary/20 active:scale-95 transition-all outline-none border-none"
                 >
                   <Plus size={24} />
                 </button>
@@ -88,25 +131,25 @@ export default function MessagesPage({ messages, setMessages, role, userAvatar, 
                   placeholder="Mesajlarda ara..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-surface-container-low border-none rounded-xl py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary transition-all"
+                  className="w-full bg-surface-container-low border-none rounded-xl py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary transition-all outline-none"
                 />
               </div>
             </header>
 
             <div className="space-y-4">
-              {filteredMessages.map((msg, i) => (
+              {filteredChatList.map((chat, i) => (
                 <motion.div 
-                  key={msg.id}
+                  key={chat.partnerId}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  onClick={() => setSelectedChat(msg.id)}
+                  onClick={() => setSelectedChat(chat.partnerId)}
                   className="bg-surface-container-lowest p-4 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all cursor-pointer group border border-transparent hover:border-secondary/20"
                 >
                   <div className="w-14 h-14 rounded-full bg-surface-container overflow-hidden flex-shrink-0 border border-outline-variant/10">
                     <img 
-                      src={msg.avatar || `https://i.pravatar.cc/150?u=${msg.sender}`} 
-                      alt={msg.sender} 
+                      src={chat.latest.avatar || `https://i.pravatar.cc/150?u=${chat.partnerId}`} 
+                      alt={chat.latest.sender} 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
@@ -114,20 +157,25 @@ export default function MessagesPage({ messages, setMessages, role, userAvatar, 
                   
                   <div className="flex-grow min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-primary truncate">{msg.sender}</h4>
-                      <span className="text-[10px] font-medium text-outline whitespace-nowrap">{msg.time}</span>
+                      <h4 className="font-bold text-primary truncate">{chat.partnerId === 'school_admin' ? 'Okul Yönetimi' : chat.latest.sender}</h4>
+                      <span className="text-[10px] font-medium text-outline whitespace-nowrap">{chat.latest.time}</span>
                     </div>
                     <p className="text-xs text-on-surface-variant font-medium truncate group-hover:text-primary transition-colors">
-                      <span className="text-secondary font-bold mr-1">[{msg.senderRole}]</span>
-                      {msg.content}
+                      {chat.latest.senderId === myId && <span className="text-secondary font-bold mr-1">Siz:</span>}
+                      {chat.latest.content}
                     </p>
                   </div>
                   
-                  <button className="w-8 h-8 flex items-center justify-center text-outline-variant hover:text-primary transition-colors border-none bg-transparent">
+                  <button className="w-8 h-8 flex items-center justify-center text-outline-variant hover:text-primary transition-colors border-none bg-transparent outline-none">
                     <MoreVertical size={20} />
                   </button>
                 </motion.div>
               ))}
+              {filteredChatList.length === 0 && (
+                <div className="text-center py-12 bg-surface-container-low rounded-3xl">
+                  <p className="text-on-surface-variant font-medium text-sm">Henüz mesaj bulunmuyor.</p>
+                </div>
+              )}
             </div>
           </motion.div>
         ) : (
@@ -142,30 +190,44 @@ export default function MessagesPage({ messages, setMessages, role, userAvatar, 
             <header className="p-4 bg-white border-b border-outline-variant/10 flex items-center gap-4">
               <button 
                 onClick={() => setSelectedChat(null)}
-                className="p-2 hover:bg-surface-container rounded-full transition-colors border-none bg-transparent"
+                className="p-2 hover:bg-surface-container rounded-full transition-colors border-none bg-transparent outline-none"
               >
                 <ArrowLeft size={24} className="text-primary" />
               </button>
               <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/20">
-                <img src={currentChat?.avatar || `https://i.pravatar.cc/150?u=${currentChat?.sender}`} alt={currentChat?.sender} />
+                <img src={activeChat?.latest.avatar || `https://i.pravatar.cc/150?u=${activeChat?.partnerId}`} alt="partner" referrerPolicy="no-referrer" />
               </div>
               <div>
-                <h4 className="font-bold text-primary leading-tight">{currentChat?.sender}</h4>
-                <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">{currentChat?.senderRole}</p>
+                <h4 className="font-bold text-primary leading-tight">
+                  {selectedChat === 'school_admin' ? 'Okul Yönetimi' : activeChat?.latest.sender}
+                </h4>
+                <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">
+                  {selectedChat === 'school_admin' ? 'RESMİ KANAL' : activeChat?.latest.senderRole}
+                </p>
               </div>
-              <button className="ml-auto p-2 text-outline-variant hover:text-primary transition-colors border-none bg-transparent">
+              <button className="ml-auto p-2 text-outline-variant hover:text-primary transition-colors border-none bg-transparent outline-none">
                 <MoreVertical size={20} />
               </button>
             </header>
 
             {/* Chat Body */}
-            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-surface-container/30">
-              <div className="flex flex-col gap-2 max-w-[80%]">
-                <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-outline-variant/10">
-                  <p className="text-sm text-on-surface leading-relaxed">{currentChat?.content}</p>
+            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-surface-container/30 no-scrollbar">
+              {activeChat?.allMessages.map((msg) => (
+                <div 
+                  key={msg.id} 
+                  className={`flex flex-col gap-1 max-w-[80%] ${msg.senderId === myId ? 'ml-auto items-end' : 'mr-auto items-start'}`}
+                >
+                  <div className={`p-4 rounded-2xl shadow-sm border border-outline-variant/10 ${
+                    msg.senderId === myId 
+                      ? 'bg-primary text-white rounded-tr-none' 
+                      : 'bg-white text-on-surface rounded-tl-none'
+                  }`}>
+                    <p className="text-sm leading-relaxed">{msg.content}</p>
+                  </div>
+                  <span className="text-[10px] text-outline px-2 font-medium">{msg.time}</span>
                 </div>
-                <span className="text-[10px] text-outline px-2 font-medium">{currentChat?.time}</span>
-              </div>
+              ))}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Chat Footer */}
@@ -174,17 +236,18 @@ export default function MessagesPage({ messages, setMessages, role, userAvatar, 
                 <input 
                   type="text" 
                   autoFocus
-                  placeholder="Yanıtınızı buraya yazın..." 
+                  placeholder="Mesajınızı buraya yazın..." 
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="flex-grow bg-transparent border-none focus:ring-0 py-3 px-4 text-sm text-on-surface"
+                  className="flex-grow bg-transparent border-none focus:ring-0 py-3 px-4 text-sm text-on-surface outline-none"
                 />
                 <button 
                   onClick={() => handleSendMessage()}
-                  className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20 hover:ring-4 hover:ring-primary/10 border-none"
+                  disabled={isSending}
+                  className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20 hover:ring-4 hover:ring-primary/10 border-none disabled:opacity-50 outline-none"
                 >
-                  <Send size={18} />
+                  {isSending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
                 </button>
               </div>
             </footer>
@@ -224,7 +287,7 @@ export default function MessagesPage({ messages, setMessages, role, userAvatar, 
                         onClick={() => setTargetStudent(student)}
                         className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100 bg-white"
                       >
-                        <img src={student.avatar} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+                        <img src={student.avatar || `https://i.pravatar.cc/150?u=${student.name}`} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
                         <div className="text-left">
                           <p className="font-medium text-gray-900">{student.name}</p>
                           <p className="text-sm text-gray-500">{student.class} - {student.parentName}</p>
@@ -255,10 +318,11 @@ export default function MessagesPage({ messages, setMessages, role, userAvatar, 
                     />
                     <button
                       onClick={() => handleSendMessage()}
-                      className="w-full py-4 bg-secondary text-white rounded-xl font-semibold hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2 border-none"
+                      disabled={isSending}
+                      className="w-full py-4 bg-secondary text-white rounded-xl font-semibold hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2 border-none disabled:opacity-50"
                     >
-                      <Send className="w-5 h-5" />
-                      Gönder
+                      {isSending ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />}
+                      {isSending ? 'Gönderiliyor...' : 'Gönder'}
                     </button>
                   </div>
                 )}

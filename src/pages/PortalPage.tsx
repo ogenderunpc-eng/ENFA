@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { UserPlus, CheckCircle2, XCircle, Clock, Search, Filter, MoreHorizontal, GraduationCap, Plus, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Student, ClassSession, Grade } from '../types';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { doc, updateDoc, setDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
 
 interface PortalPageProps {
   students: Student[];
@@ -16,69 +18,100 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [isEnteringGrade, setIsEnteringGrade] = useState<string | null>(null);
-  const [newStudent, setNewStudent] = useState({ name: '', number: '' });
-  const [newGrade, setNewGrade] = useState({ subject: 'Matematik', value: '' });
+  const [newStudent, setNewStudent] = useState({ name: '', number: '', password: '' });
+  const [newGrade, setNewGrade] = useState({ subject: 'Matematik', value: '', note: '' });
 
-  const handleAttendance = (id: string, status: 'present' | 'absent' | 'late') => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+  const handleAttendance = async (id: string, status: 'present' | 'absent' | 'late') => {
+    try {
+      await updateDoc(doc(db, 'students', id), { status });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${id}`);
+    }
   };
 
-  const handleAddStudent = (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudent.name || !newStudent.number) return;
     
+    const id = Date.now().toString();
     const student: Student = {
-      id: Date.now().toString(),
+      id,
       name: newStudent.name,
       number: newStudent.number,
       avatar: `https://i.pravatar.cc/150?u=${newStudent.name}`,
-      grades: []
+      grades: [],
+      password: newStudent.password || 'oge1212',
+      role: 'student'
     };
     
-    setStudents(prev => [...prev, student]);
-    setNewStudent({ name: '', number: '' });
-    setIsAddingStudent(false);
+    try {
+      await setDoc(doc(db, 'students', id), student);
+      setNewStudent({ name: '', number: '', password: '' });
+      setIsAddingStudent(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'students');
+    }
   };
 
-  const handleAddGrade = (e: React.FormEvent) => {
+  const handleAddGrade = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEnteringGrade || !newGrade.value) return;
+
+    const student = students.find(s => s.id === isEnteringGrade);
+    if (!student) return;
 
     const grade: Grade = {
       subject: newGrade.subject,
       value: Number(newGrade.value),
-      date: new Date().toLocaleDateString('tr-TR')
+      date: new Date().toLocaleDateString('tr-TR'),
+      note: newGrade.note
     };
 
-    setStudents(prev => prev.map(s => 
-      s.id === isEnteringGrade 
-        ? { ...s, grades: [...(s.grades || []), grade] } 
-        : s
-    ));
-
-    setNewGrade({ subject: 'Matematik', value: '' });
-    setIsEnteringGrade(null);
-  };
-
-  const handleEditStudent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingStudent) return;
-    setStudents(prev => prev.map(s => s.id === editingStudent.id ? editingStudent : s));
-    setEditingStudent(null);
-  };
-
-  const handleDeleteStudent = (id: string) => {
-    if (window.confirm('Bu öğrenciyi silmek istediğinize emin misiniz?')) {
-      setStudents(prev => prev.filter(s => s.id !== id));
-      setSelectedStudents(prev => prev.filter(sid => sid !== id));
+    try {
+      await updateDoc(doc(db, 'students', isEnteringGrade), {
+        grades: [...(student.grades || []), grade]
+      });
+      setNewGrade({ subject: 'Matematik', value: '', note: '' });
+      setIsEnteringGrade(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${isEnteringGrade}`);
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleEditStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    
+    try {
+      await updateDoc(doc(db, 'students', editingStudent.id), { ...editingStudent });
+      setEditingStudent(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${editingStudent.id}`);
+    }
+  };
+
+  const handleDeleteStudent = async (id: string) => {
+    if (window.confirm('Bu öğrenciyi silmek istediğinize emin misiniz?')) {
+      try {
+        await deleteDoc(doc(db, 'students', id));
+        setSelectedStudents(prev => prev.filter(sid => sid !== id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `students/${id}`);
+      }
+    }
+  };
+
+  const handleBulkDelete = async () => {
     if (selectedStudents.length === 0) return;
     if (window.confirm(`${selectedStudents.length} öğrenciyi silmek istediğinize emin misiniz?`)) {
-      setStudents(prev => prev.filter(s => !selectedStudents.includes(s.id)));
-      setSelectedStudents([]);
+      try {
+        for (const id of selectedStudents) {
+          await deleteDoc(doc(db, 'students', id));
+        }
+        setSelectedStudents([]);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, 'students/bulk');
+      }
     }
   };
 
@@ -123,7 +156,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
               className="min-w-[300px] bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/10 group cursor-pointer"
             >
               <div className="h-32 relative">
-                <img src={c.image} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                <img src={c.image || 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1000&auto=format&fit=crop'} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-3 left-4">
                   <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">{c.time}</span>
@@ -219,7 +252,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                           className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/20 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                           onClick={() => setViewingStudent(s)}
                         >
-                          <img src={s.avatar} alt={s.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={s.avatar || `https://i.pravatar.cc/150?u=${s.name}`} alt={s.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         </div>
                         <div className="cursor-pointer" onClick={() => setViewingStudent(s)}>
                           <span className="font-bold text-primary text-sm block hover:text-secondary transition-colors">{s.name}</span>
@@ -326,6 +359,16 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                     required
                   />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Giriş Şifresi (Veli/Öğrenci)</label>
+                  <input 
+                    type="text" 
+                    value={newStudent.password}
+                    onChange={(e) => setNewStudent(prev => ({ ...prev, password: e.target.value }))}
+                    className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary transition-all"
+                    placeholder="Örn: 123456"
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button 
                     type="button"
@@ -386,6 +429,16 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                     required
                   />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Giriş Şifresi</label>
+                  <input 
+                    type="text" 
+                    value={editingStudent.password || ''}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, password: e.target.value })}
+                    className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary transition-all"
+                    placeholder="Şifre belirleyin"
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button 
                     type="button"
@@ -427,7 +480,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
               <div className="flex justify-between items-start mb-8">
                 <div className="flex items-center gap-6">
                   <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-surface-container">
-                    <img src={viewingStudent.avatar} alt={viewingStudent.name} className="w-full h-full object-cover" />
+                    <img src={viewingStudent.avatar || `https://i.pravatar.cc/150?u=${viewingStudent.name}`} alt={viewingStudent.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h4 className="text-3xl font-extrabold text-primary">{viewingStudent.name}</h4>
@@ -448,19 +501,38 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
 
               <div className="space-y-8">
                 <div>
-                  <h5 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
-                    <GraduationCap className="text-secondary" size={20} />
-                    Akademik Başarılar & Notlar
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {viewingStudent.grades && viewingStudent.grades.length > 0 ? viewingStudent.grades.map((g, i) => (
-                      <div key={i} className="bg-surface-container-low p-4 rounded-2xl flex justify-between items-center">
-                        <div>
-                          <p className="text-xs font-bold text-primary uppercase tracking-tight">{g.subject}</p>
-                          <p className="text-[10px] text-on-surface-variant">{g.date}</p>
+                    <div className="flex justify-between items-center mb-4">
+                      <h5 className="text-lg font-bold text-primary flex items-center gap-2">
+                        <GraduationCap className="text-secondary" size={20} />
+                        Akademik Başarılar & Notlar
+                      </h5>
+                      <button 
+                        onClick={() => {
+                          setIsEnteringGrade(viewingStudent.id);
+                          // We don't close viewingStudent, so modal overlaps.
+                        }}
+                        className="flex items-center gap-1 text-secondary text-xs font-bold hover:underline"
+                      >
+                        <Plus size={16} />
+                        Yeni Giriş Ekle
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {viewingStudent.grades && viewingStudent.grades.length > 0 ? viewingStudent.grades.map((g, i) => (
+                        <div key={i} className="bg-surface-container-low p-4 rounded-2xl flex flex-col gap-2">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-xs font-bold text-primary uppercase tracking-tight">{g.subject}</p>
+                              <p className="text-[10px] text-on-surface-variant font-medium">{g.date}</p>
+                            </div>
+                            <div className="text-2xl font-black text-secondary">{g.value}</div>
+                          </div>
+                          {g.note && (
+                            <p className="text-[10px] text-on-surface-variant italic border-t border-outline-variant/10 pt-2 line-clamp-2">
+                              {g.note}
+                            </p>
+                          )}
                         </div>
-                        <div className="text-2xl font-black text-secondary">{g.value}</div>
-                      </div>
                     )) : (
                       <div className="col-span-2 py-8 text-center bg-surface-container-low rounded-2xl">
                         <p className="text-on-surface-variant text-sm font-medium">Henüz not girişi yapılmamış.</p>
@@ -516,11 +588,11 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                     className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary transition-all"
                   >
                     <option>Matematik</option>
-                    <option>Fizik</option>
-                    <option>Kimya</option>
-                    <option>Biyoloji</option>
-                    <option>Edebiyat</option>
-                    <option>Tarih</option>
+                    <option>Türkçe</option>
+                    <option>Fen Bilgisi</option>
+                    <option>Yazılım</option>
+                    <option>Sosyal Bilgiler</option>
+                    <option>İngilizce</option>
                   </select>
                 </div>
                 <div className="space-y-1">
@@ -534,6 +606,15 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                     className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary transition-all"
                     placeholder="Örn: 85"
                     required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Görüş Notu (Opsiyonel)</label>
+                  <textarea 
+                    value={newGrade.note}
+                    onChange={(e) => setNewGrade(prev => ({ ...prev, note: e.target.value }))}
+                    className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary transition-all h-20 resize-none"
+                    placeholder="Öğrenci performansı hakkında kısa bir not..."
                   />
                 </div>
                 <div className="flex gap-3 pt-4">

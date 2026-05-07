@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, Filter, Download, ChevronRight, BarChart3, TrendingUp, Award, Clock, BookOpen, User, Users, Plus, X } from 'lucide-react';
 import { Student, Role, KTSResult } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell } from 'recharts';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 interface KTSPageProps {
   students: Student[];
@@ -34,8 +36,8 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
     s.number.includes(searchTerm)
   );
 
-  const handleAddResult = () => {
-    if (!selectedStudent || !setStudents) return;
+  const handleAddResult = async () => {
+    if (!selectedStudent) return;
 
     const result: KTSResult = {
       id: Math.random().toString(36).substr(2, 9),
@@ -50,35 +52,33 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
       rankGeneral: parseInt(newResult.rankGeneral) || 1
     };
 
-    setStudents(prev => prev.map(s => {
-      if (s.id === selectedStudent.id) {
-        return {
-          ...s,
-          ktsResults: [result, ...(s.ktsResults || [])]
-        };
-      }
-      return s;
-    }));
-
-    setShowAddModal(false);
-    setNewResult({
-      examName: '',
-      score: '',
-      correct: '',
-      wrong: '',
-      empty: '',
-      date: new Date().toLocaleDateString('tr-TR'),
-      rankClass: '',
-      rankSchool: '',
-      rankGeneral: ''
-    });
-    
-    // Update local selected student
-    const updatedStudent = {
-      ...selectedStudent,
-      ktsResults: [result, ...(selectedStudent.ktsResults || [])]
-    };
-    setSelectedStudent(updatedStudent);
+    try {
+      await updateDoc(doc(db, 'students', selectedStudent.id), {
+        ktsResults: [result, ...(selectedStudent.ktsResults || [])]
+      });
+      
+      setShowAddModal(false);
+      setNewResult({
+        examName: '',
+        score: '',
+        correct: '',
+        wrong: '',
+        empty: '',
+        date: new Date().toLocaleDateString('tr-TR'),
+        rankClass: '',
+        rankSchool: '',
+        rankGeneral: ''
+      });
+      
+      // Update local state briefly to show feedback before Firestore sync
+      const updatedStudent = {
+        ...selectedStudent,
+        ktsResults: [result, ...(selectedStudent.ktsResults || [])]
+      };
+      setSelectedStudent(updatedStudent);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${selectedStudent.id}`);
+    }
   };
 
   // Calculate General Overview Data
@@ -164,7 +164,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                     className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${selectedStudent?.id === student.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-surface-container'}`}
                   >
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20">
-                      <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
+                      <img src={student.avatar || `https://i.pravatar.cc/150?u=${student.name}`} alt={student.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="text-left">
                       <p className="text-xs font-bold leading-none mb-1">{student.name}</p>
@@ -194,7 +194,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/5 flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div className="flex items-center gap-6">
                   <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-surface shadow-xl">
-                    <img src={selectedStudent.avatar} alt={selectedStudent.name} className="w-full h-full object-cover" />
+                    <img src={selectedStudent.avatar || `https://i.pravatar.cc/150?u=${selectedStudent.name}`} alt={selectedStudent.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-primary">{selectedStudent.name}</h3>
@@ -528,7 +528,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                             <div className="flex items-center justify-center -space-x-2">
                               {students.slice(0, 3).map((s, i) => (
                                 <div key={i} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-sm">
-                                  <img src={s.avatar} alt="Student" />
+                                  <img src={s.avatar || `https://i.pravatar.cc/150?u=${s.name}`} alt="Student" />
                                 </div>
                               ))}
                               <div className="w-8 h-8 rounded-full bg-surface-container border-2 border-white flex items-center justify-center text-[10px] font-black text-on-surface-variant">

@@ -1,4 +1,4 @@
-export type Role = 'teacher' | 'parent';
+export type Role = 'teacher' | 'parent' | 'student';
 
 export interface User {
   id: string;
@@ -16,6 +16,7 @@ export interface Message {
   avatar?: string;
   senderId?: string;
   recipientId?: string;
+  createdAt?: string;
 }
 
 export interface ClassSession {
@@ -40,6 +41,7 @@ export interface Grade {
   subject: string;
   value: number;
   date: string;
+  note?: string;
 }
 
 export interface KTSResult {
@@ -60,11 +62,14 @@ export interface Student {
   name: string;
   number: string;
   avatar: string;
+  role: Role;
+  email?: string;
   status?: 'present' | 'absent' | 'late';
   grades?: Grade[];
   class?: string;
   parentName?: string;
   ktsResults?: KTSResult[];
+  password?: string;
 }
 
 export interface TeacherComment {

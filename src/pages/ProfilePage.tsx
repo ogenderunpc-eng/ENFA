@@ -20,7 +20,7 @@ interface ProfilePageProps {
 export default function ProfilePage({ role, userAvatar, userName, userEmail, userPhone, isDeviceLinked, setIsDeviceLinked, onLogout, onUpdateAvatar, onUpdateProfile }: ProfilePageProps) {
   const [activeSetting, setActiveSetting] = React.useState<string | null>(null);
   const [showToast, setShowToast] = React.useState(false);
-  const [currentPlan, setCurrentPlan] = React.useState('Aeon Pro Plus');
+  const [currentPlan, setCurrentPlan] = React.useState('OGE Pro Plus');
   
   // Local form states
   const [tempAvatarUrl, setTempAvatarUrl] = React.useState(userAvatar);
@@ -121,7 +121,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                 <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-primary to-secondary">
                   <div className="w-full h-full rounded-full border-4 border-white overflow-hidden bg-surface-container">
                     <img 
-                      src={userAvatar} 
+                      src={userAvatar || `https://ui-avatars.com/api/?name=${userName}`} 
                       alt="Profile" 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
@@ -388,12 +388,12 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                   </div>
                   <div>
                     <h4 className="text-xl font-black text-primary">
-                      {isDeviceLinked ? 'Cihaz Bağlandı' : 'Aeon Academy Mobil'}
+                      {isDeviceLinked ? 'Cihaz Bağlandı' : 'OGE Academy Mobil'}
                     </h4>
                     <p className="text-sm text-on-surface-variant">
                       {isDeviceLinked 
                         ? 'iPhone 15 Pro cihazınız başarıyla hesabınızla eşleştirildi.' 
-                        : 'Aeon Academy deneyimini telefonunuza taşıyın ve anlık bildirimlerle her şeyden haberdar olun.'}
+                        : 'OGE Academy deneyimini telefonunuza taşıyın ve anlık bildirimlerle her şeyden haberdar olun.'}
                     </p>
                   </div>
                 </div>
@@ -488,7 +488,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                           <p className="text-xs font-bold text-primary uppercase tracking-widest">Nasıl Bağlanırım?</p>
                           <div className="space-y-3 text-left">
                             {[
-                              "Aeon Academy uygulamasını App Store veya Play Store'dan indirin.",
+                              "OGE Academy uygulamasını App Store veya Play Store'dan indirin.",
                               "Uygulamayı açın ve 'Cihaz Eşle' seçeneğine dokunun.",
                               "Ekranda gördüğünüz QR kodu taratın."
                             ].map((step, i) => (
@@ -545,7 +545,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                   </div>
                   <button 
                     onClick={() => {
-                      setCurrentPlan(currentPlan === 'Aeon Pro Plus' ? 'Aeon Kurumsal' : 'Aeon Pro Plus');
+                      setCurrentPlan(currentPlan === 'OGE Pro Plus' ? 'OGE Kurumsal' : 'OGE Pro Plus');
                       toastSuccess('Planınız başarıyla güncellendi.');
                     }}
                     className="px-4 py-2 bg-secondary text-white rounded-xl text-xs font-bold shadow-md hover:scale-105 transition-all"
@@ -607,7 +607,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                 {[
                   { label: 'Yeni Mesaj Bildirimi', desc: 'Bir veli mesaj gönderdiğinde bildirim al.' },
                   { label: 'Ders Hatırlatıcıları', desc: 'Dersinize 15 dakika kala hatırlatıcı al.' },
-                  { label: 'Sistem Güncellemeleri', desc: 'Aeon Academy yeniliklerinden haberdar ol.' },
+                  { label: 'Sistem Güncellemeleri', desc: 'OGE Academy yeniliklerinden haberdar ol.' },
                 ].map((s, i) => (
                   <div key={i} className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
                     <div>
@@ -630,7 +630,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                     <div className="relative group">
                       <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md">
                         <img 
-                          src={tempAvatarUrl} 
+                          src={tempAvatarUrl || `https://ui-avatars.com/api/?name=${userName}`} 
                           alt="Preview" 
                           className="w-full h-full object-cover" 
                           referrerPolicy="no-referrer" 
@@ -708,7 +708,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                       type="email" 
                       value={tempEmail}
                       onChange={(e) => setTempEmail(e.target.value)}
-                      placeholder="eposta@aeon.edu" 
+                      placeholder="eposta@oge.edu" 
                       className="w-full bg-surface-container-low border border-outline-variant/10 rounded-2xl py-4 px-5 text-sm focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none" 
                     />
                   </div>

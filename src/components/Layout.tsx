@@ -31,12 +31,12 @@ export default function Layout({ children, role, onSwitchRole, activeTab, setAct
             <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container border border-outline-variant/20">
               <img 
                 className="w-full h-full object-cover" 
-                src={userAvatar} 
+                src={userAvatar || `https://ui-avatars.com/api/?name=User`} 
                 alt="User Profile"
                 referrerPolicy="no-referrer"
               />
             </div>
-            <h1 className="text-xl font-bold text-primary tracking-tight">Aeon Academy</h1>
+            <h1 className="text-xl font-bold text-primary tracking-tight">OGE Academy</h1>
           </div>
         </div>
       </header>

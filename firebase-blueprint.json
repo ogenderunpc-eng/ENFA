@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Represents a student and their academic records.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "number": { "type": "string" },
+        "avatar": { "type": "string" },
+        "class": { "type": "string" },
+        "parentName": { "type": "string" },
+        "password": { "type": "string" },
+        "grades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": { "type": "string" },
+              "value": { "type": "number" },
+              "date": { "type": "string" }
+            }
+          }
+        },
+        "ktsResults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "examName": { "type": "string" },
+              "date": { "type": "string" },
+              "correct": { "type": "number" },
+              "wrong": { "type": "number" },
+              "empty": { "type": "number" },
+              "score": { "type": "number" },
+              "rankClass": { "type": "number" },
+              "rankSchool": { "type": "number" },
+              "rankGeneral": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["name", "number"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A communication message between users.",
+      "type": "object",
+      "properties": {
+        "sender": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "content": { "type": "string" },
+        "time": { "type": "string" },
+        "avatar": { "type": "string" },
+        "senderId": { "type": "string" },
+        "recipientId": { "type": "string" }
+      },
+      "required": ["sender", "content", "time"]
+    },
+    "Class": {
+      "title": "Class",
+      "description": "A scheduled class session.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "classGroup": { "type": "string" },
+        "image": { "type": "string" },
+        "status": { "type": "string", "enum": ["ongoing", "next"] }
+      },
+      "required": ["title", "time"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of students."
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat and broadcast messages."
+    },
+    "/classes/{classId}": {
+      "schema": "Class",
+      "description": "Schedule of classes."
+    },
+    "/yoneticiler/{adminId}": {
+      "schema": "Message",
+      "description": "Admin users collection."
+    }
+  }
+}

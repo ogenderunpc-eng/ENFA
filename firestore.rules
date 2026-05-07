@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Global Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/yoneticiler/$(request.auth.uid)) ||
+        request.auth.token.email == 'ogenderunpc@gmail.com'
+      ); 
+    }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // 1. Relational Gate (Teachers)
+    function isTeacher() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) ||
+        isAdmin()
+      );
+    }
+
+    // 2. Validation Blueprints
+    function isValidStudent(data) {
+      return data.keys().hasAll(['name', 'number']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.number is string && data.number.size() <= 50 &&
+             (!('grades' in data) || data.grades is list) &&
+             (!('ktsResults' in data) || data.ktsResults is list);
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['sender', 'content']) &&
+             data.sender is string && data.sender.size() <= 200 &&
+             data.content is string && data.content.size() <= 2000 &&
+             (data.get('time', '') is string) &&
+             (data.get('senderRole', '') is string);
+    }
+
+    function isValidClass(data) {
+        return data.keys().hasAll(['title', 'time']) &&
+               data.title is string && data.title.size() <= 200;
+    }
+
+    // --- Collections ---
+
+    match /students/{studentId} {
+      allow read: if isSignedIn();
+      allow create: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidStudent(incoming());
+      allow update: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidStudent(incoming());
+      allow delete: if isTeacher();
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidMessage(incoming());
+      allow update: if false;
+      allow delete: if isTeacher();
+    }
+
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow write: if isTeacher() && isValidClass(incoming());
+    }
+
+    match /teachers/{teacherId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == teacherId;
+      allow update, delete: if isAdmin();
+    }
+
+    match /yoneticiler/{adminId} {
+      allow read: if isSignedIn() && request.auth.uid == adminId;
+      allow write: if false;
+    }
+  }
+}
