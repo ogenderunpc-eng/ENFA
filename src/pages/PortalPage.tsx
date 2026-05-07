@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus, CheckCircle2, XCircle, Clock, Search, Filter, MoreHorizontal, GraduationCap, Plus, X, Trash2 } from 'lucide-react';
+import { UserPlus, CheckCircle2, XCircle, Clock, Search, Filter, MoreHorizontal, GraduationCap, Plus, X, Trash2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Student, ClassSession, Grade } from '../types';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -18,6 +18,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [isEnteringGrade, setIsEnteringGrade] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [newStudent, setNewStudent] = useState({ name: '', number: '', password: '' });
   const [newGrade, setNewGrade] = useState({ subject: 'Matematik', value: '', note: '' });
 
@@ -91,19 +92,24 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
   };
 
   const handleDeleteStudent = async (id: string) => {
-    if (window.confirm('Bu öğrenciyi silmek istediğinize emin misiniz?')) {
+    if (window.confirm('Bu öğrenciyi ve tüm kayıtlarını silmek istediğinize emin misiniz?')) {
+      setIsDeleting(id);
       try {
         await deleteDoc(doc(db, 'students', id));
         setSelectedStudents(prev => prev.filter(sid => sid !== id));
+        if (viewingStudent?.id === id) setViewingStudent(null);
       } catch (error) {
         handleFirestoreError(error, OperationType.DELETE, `students/${id}`);
+      } finally {
+        setIsDeleting(null);
       }
     }
   };
 
   const handleBulkDelete = async () => {
     if (selectedStudents.length === 0) return;
-    if (window.confirm(`${selectedStudents.length} öğrenciyi silmek istediğinize emin misiniz?`)) {
+    if (window.confirm(`${selectedStudents.length} öğrenciyi ve tüm kayıtlarını silmek istediğinize emin misiniz?`)) {
+      setIsDeleting('bulk');
       try {
         for (const id of selectedStudents) {
           await deleteDoc(doc(db, 'students', id));
@@ -111,6 +117,8 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
         setSelectedStudents([]);
       } catch (error) {
         handleFirestoreError(error, OperationType.DELETE, 'students/bulk');
+      } finally {
+        setIsDeleting(null);
       }
     }
   };
@@ -541,11 +549,25 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                   </div>
                 </div>
 
-                <div className="bg-primary/5 p-6 rounded-2xl">
-                  <h5 className="text-sm font-bold text-primary mb-2">Öğretmen Görüşü</h5>
-                  <p className="text-sm text-on-surface-variant leading-relaxed">
-                    Öğrenci genel olarak derslere ilgili ve katılımı yüksek. Matematik alanındaki gelişimini son sınavlarda net bir şekilde görebiliyoruz.
-                  </p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => handleDeleteStudent(viewingStudent.id)}
+                    className="flex-1 py-3 bg-error/10 text-error font-bold rounded-xl hover:bg-error/20 transition-all flex items-center justify-center gap-2"
+                    disabled={isDeleting === viewingStudent.id}
+                  >
+                    {isDeleting === viewingStudent.id ? <Loader2 className="animate-spin" size={18} /> : <Trash2 size={18} />}
+                    Kaydı Sil
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setEditingStudent(viewingStudent);
+                      setViewingStudent(null);
+                    }}
+                    className="flex-1 py-3 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Filter size={18} />
+                    Düzenle
+                  </button>
                 </div>
               </div>
             </motion.div>
