@@ -1,16 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2, Sparkles, Send, ShieldCheck, UserMinus, UserPlus } from 'lucide-react';
+import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2, Sparkles, Send, ShieldCheck, UserMinus, UserPlus, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Message, ClassSession, Student } from '../types';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, writeBatch, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, writeBatch, onSnapshot, setDoc } from 'firebase/firestore';
+import StudentCard from '../components/StudentCard';
 
 interface AttendanceRecord {
   id: string;
   studentId: string;
   studentName: string;
   date: string;
-  status: 'present' | 'absent';
+  status: 'present' | 'absent' | 'late';
   classId: string;
 }
 
@@ -30,7 +31,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
   const [isManagingAttendance, setIsManagingAttendance] = useState(false);
   const [isGeneratingAIReport, setIsGeneratingAIReport] = useState(false);
   const [aiReportContent, setAiReportContent] = useState('');
-  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [attendance, setAttendance] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
   const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>([]);
   const [isSavingAttendance, setIsSavingAttendance] = useState(false);
   
@@ -45,10 +46,9 @@ export default function TeacherDashboard({ classes, messages, students, setClass
 
   useEffect(() => {
     // Initialize attendance with everyone present by default
-    const initial = {};
+    const initial: Record<string, 'present' | 'absent' | 'late'> = {};
     students.forEach(s => {
-      // @ts-ignore
-      initial[s.id] = true;
+      initial[s.id] = 'present';
     });
     setAttendance(initial);
   }, [students]);
@@ -70,8 +70,134 @@ export default function TeacherDashboard({ classes, messages, students, setClass
     return () => unsubscribe();
   }, []);
 
-  const toggleAttendance = (id: string) => {
-    setAttendance(prev => ({ ...prev, [id]: !prev[id] }));
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    name: '',
+    email: '',
+    class: '9-A',
+    avatar: ''
+  });
+  const [isSavingStudent, setIsSavingStudent] = useState(false);
+
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStudent.name || !newStudent.email) return;
+
+    setIsSavingStudent(true);
+    try {
+      const studentData = {
+        name: newStudent.name,
+        number: `102${Math.floor(100 + Math.random() * 900)}`, // Required field for schema
+        email: newStudent.email,
+        class: newStudent.class,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newStudent.name)}&background=random`,
+        role: 'parent', // In this app, parents and students are often synonymous for the portal
+        grades: [],
+        attendance: 100,
+        ktsResults: [],
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, 'students'), studentData);
+      
+      setIsAddingStudent(false);
+      setNewStudent({ name: '', email: '', class: '9-A', avatar: '' });
+      setShowNotification(true);
+      setToastMessage('Yeni talebe başarıyla kaydedildi!');
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'students');
+    } finally {
+      setIsSavingStudent(false);
+    }
+  };
+
+  const [isManagingStudent, setIsManagingStudent] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editMetrics, setEditMetrics] = useState({
+    grade: 0,
+    attendance: 0,
+    status: 'present' as 'present' | 'absent' | 'late'
+  });
+
+  const handleUpdateStudentMetrics = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+
+    setIsSavingStudent(true);
+    try {
+      const studentDocRef = doc(db, 'students', editingStudent.id);
+      
+      // Update grades if changed
+      const newGrades = [...(editingStudent.grades || [])];
+      if (editMetrics.grade > 0) {
+        newGrades.push({
+          subject: 'Genel Değerlendirme',
+          value: editMetrics.grade,
+          date: new Date().toISOString().split('T')[0]
+        });
+      }
+
+      await setDoc(studentDocRef, {
+        ...editingStudent,
+        grades: newGrades,
+        status: editMetrics.status,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      // If status changed, record it in attendance
+      const today = new Date().toISOString().split('T')[0];
+      const attendanceId = `${editingStudent.id}_${today}`;
+      await setDoc(doc(db, 'attendance', attendanceId), {
+        studentId: editingStudent.id,
+        studentName: editingStudent.name,
+        date: today,
+        status: editMetrics.status,
+        classId: editingStudent.class || '9-A',
+        updatedAt: new Date().toISOString()
+      });
+
+      setToastMessage(`${editingStudent.name} verileri güncellendi.`);
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      setIsManagingStudent(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${editingStudent.id}`);
+    } finally {
+      setIsSavingStudent(false);
+    }
+  };
+
+  const [messageText, setMessageText] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  const handleSendMessage = async (student: Student) => {
+    if (!messageText.trim()) return;
+    
+    setIsSendingMessage(true);
+    try {
+      await addDoc(collection(db, 'messages'), {
+        sender: 'Muallim',
+        senderRole: 'teacher',
+        content: messageText,
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        recipientId: student.id,
+        createdAt: new Date().toISOString()
+      });
+      
+      setMessageText('');
+      setToastMessage('Mesaj başarıyla gönderildi.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'messages');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  const toggleAttendance = (id: string, status: 'present' | 'absent' | 'late') => {
+    setAttendance(prev => ({ ...prev, [id]: status }));
   };
 
   const generateAIReport = () => {
@@ -185,7 +311,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
           studentId: student.id,
           studentName: student.name,
           date: today,
-          status: attendance[student.id] ? 'present' : 'absent',
+          status: attendance[student.id] || 'present',
           classId: selectedClass.id
         });
       });
@@ -229,6 +355,13 @@ export default function TeacherDashboard({ classes, messages, students, setClass
           </motion.div>
           
             <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={() => setIsAddingStudent(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-primary text-secondary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/10"
+              >
+                <Plus size={20} />
+                <span className="font-semibold">Talebe Ekle</span>
+              </button>
               <button 
                 onClick={() => setIsManagingAttendance(true)}
                 className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
@@ -569,6 +702,40 @@ export default function TeacherDashboard({ classes, messages, students, setClass
         )}
       </div>
 
+      {/* Student Overview Cards Section */}
+      <section className="mt-12">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-bold text-primary flex items-center gap-3">
+            <Users className="text-accent" size={24} />
+            Öğrenci Kartları
+          </h3>
+          <button 
+            onClick={() => onNavigate?.('portal')}
+            className="text-xs font-black text-accent tracking-widest uppercase hover:underline"
+          >
+            Tümünü Yönet
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {students.map(student => (
+            <StudentCard 
+              key={student.id} 
+              student={student} 
+              attendanceStatus={attendance[student.id] || student.status || 'not-set'}
+              onClick={() => {
+                setEditingStudent(student);
+                setEditMetrics({
+                  grade: student.grades?.[0]?.value || 0,
+                  attendance: 0, // Should be calculated
+                  status: student.status || 'present'
+                });
+                setIsManagingStudent(true);
+              }}
+            />
+          ))}
+        </div>
+      </section>
+
       {/* Daily Summary Action Cards */}
       <section className="mt-12">
         <h3 className="text-2xl font-bold text-primary mb-6 flex items-center gap-3">
@@ -681,28 +848,14 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar p-2">
                 {students.map((student) => (
-                  <div 
-                    key={student.id} 
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${attendance[student.id] ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/10">
-                        <img src={student.avatar || `https://i.pravatar.cc/150?u=${student.name}`} alt={student.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-primary">{student.name}</p>
-                        <p className="text-[10px] text-on-surface-variant font-medium">Talebe No: #102{student.id}</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => toggleAttendance(student.id)}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${attendance[student.id] ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-red-500 text-white shadow-lg shadow-red-200'}`}
-                    >
-                      {attendance[student.id] ? <UserPlus size={20} /> : <UserMinus size={20} />}
-                    </button>
-                  </div>
+                  <StudentCard 
+                    key={student.id}
+                    student={student}
+                    attendanceStatus={attendance[student.id]}
+                    onStatusChange={(status) => toggleAttendance(student.id, status)}
+                  />
                 ))}
               </div>
 
@@ -789,6 +942,233 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                 >
                   KAPAT
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Student Management Modal */}
+      <AnimatePresence>
+        {isManagingStudent && editingStudent && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsManagingStudent(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-secondary/20 bg-surface-container flex items-center justify-center">
+                      {editingStudent.avatar ? (
+                        <img src={editingStudent.avatar} alt={editingStudent.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Users size={24} className="text-secondary" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-primary">{editingStudent.name}</h2>
+                      <p className="text-on-surface-variant text-xs font-bold uppercase tracking-widest">{editingStudent.class || 'Sınıf Yok'} Yönetimi</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsManagingStudent(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                    <X size={24} className="text-outline" />
+                  </button>
+                </div>
+                
+                <form onSubmit={handleUpdateStudentMetrics} className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">Başarı Puanı</label>
+                      <input 
+                        type="number"
+                        value={editMetrics.grade}
+                        onChange={(e) => setEditMetrics({...editMetrics, grade: parseInt(e.target.value)})}
+                        className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-bold text-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">Devamsızlık</label>
+                      <input 
+                        type="number"
+                        value={editMetrics.attendance}
+                        onChange={(e) => setEditMetrics({...editMetrics, attendance: parseInt(e.target.value)})}
+                        className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-bold text-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">Bugünkü Durum</label>
+                    <div className="flex gap-2">
+                      {(['present', 'late', 'absent'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setEditMetrics({...editMetrics, status: s})}
+                          className={`flex-grow py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                            editMetrics.status === s 
+                              ? 'bg-secondary text-primary shadow-lg shadow-secondary/20' 
+                              : 'bg-surface-container text-outline hover:bg-surface-container-high'
+                          }`}
+                        >
+                          {s === 'present' ? 'Geldi' : s === 'late' ? 'Geç' : 'Gelmedi'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-outline-variant/10">
+                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">Özel Mesaj Gönder</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder="Talebeye notunuz..."
+                        className="flex-grow px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-medium text-sm"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => handleSendMessage(editingStudent)}
+                        disabled={isSendingMessage || !messageText.trim()}
+                        className="p-3 bg-primary text-secondary rounded-xl hover:opacity-90 disabled:opacity-50 transition-all"
+                      >
+                        {isSendingMessage ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4 pt-4">
+                    <button 
+                      type="button"
+                      onClick={() => setIsManagingStudent(false)}
+                      className="flex-grow py-4 bg-surface-container font-bold text-primary rounded-xl hover:bg-surface-container-high transition-colors"
+                    >
+                      İptal
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={isSavingStudent}
+                      className="flex-grow py-4 bg-secondary text-primary font-bold rounded-xl shadow-lg shadow-secondary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    >
+                      {isSavingStudent ? (
+                        <Loader2 size={20} className="animate-spin" />
+                      ) : (
+                        <>
+                          <ShieldCheck size={18} />
+                          Verileri Güncelle
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Student Modal */}
+      <AnimatePresence>
+        {isAddingStudent && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsAddingStudent(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-3xl font-black text-primary mb-1">Yeni Talebe Kaydı</h2>
+                    <p className="text-on-surface-variant font-medium">Enderun sistemine yeni bir öğrenci ekleyin.</p>
+                  </div>
+                  <button onClick={() => setIsAddingStudent(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                    <X size={24} className="text-outline" />
+                  </button>
+                </div>
+                
+                <form onSubmit={handleAddStudent} className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">Talebe Adı Soyadı</label>
+                    <input 
+                      type="text"
+                      value={newStudent.name}
+                      onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
+                      className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                      placeholder="Örn: Ahmet Faruk"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">E-posta Adresi (Veli/Öğrenci)</label>
+                    <input 
+                      type="email"
+                      value={newStudent.email}
+                      onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
+                      className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                      placeholder="orn@eposta.com"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">Sınıf Seçimi</label>
+                    <select 
+                      value={newStudent.class}
+                      onChange={(e) => setNewStudent({...newStudent, class: e.target.value})}
+                      className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                    >
+                      <option value="9-A">9-A</option>
+                      <option value="9-B">9-B</option>
+                      <option value="10-A">10-A</option>
+                      <option value="11-A">11-A</option>
+                    </select>
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <button 
+                      type="button"
+                      onClick={() => setIsAddingStudent(false)}
+                      className="flex-grow py-4 bg-surface-container font-bold text-primary rounded-xl hover:bg-surface-container-high transition-colors"
+                    >
+                      İptal
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={isSavingStudent}
+                      className="flex-grow py-4 bg-primary text-secondary font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    >
+                      {isSavingStudent ? (
+                        <Loader2 size={20} className="animate-spin" />
+                      ) : (
+                        <>
+                          <Plus size={18} />
+                          Talebeyi Kaydet
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
             </motion.div>
           </div>

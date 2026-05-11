@@ -21,8 +21,8 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
   const [toastMessage, setToastMessage] = useState('');
   const [homeworkList, setHomeworkList] = useState<Homework[]>([]);
   
-  // Real child data (assuming first student for demo)
-  const child = students[0];
+  // Real child data (assuming first student for demo context)
+  const child = students.find(s => s.name === userName) || students[0];
 
   useEffect(() => {
     const q = query(collection(db, 'homework'));
@@ -73,12 +73,15 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
   }, [child, classes]);
   
   const realGrades = child?.grades || [];
+  const avgGrade = realGrades.length > 0 
+    ? Math.round(realGrades.reduce((acc, curr) => acc + curr.value, 0) / realGrades.length) 
+    : 0;
   
   const [activities] = useState([
-    { id: 1, type: 'attendance', title: 'Yoklama Girişi', description: 'Ali bugün Matematik dersine katıldı.', time: '09:15', icon: <UserPlus className="text-green-500" size={18} /> },
-    { id: 2, type: 'grade', title: 'Yeni Not Girildi', description: 'Fizik laboratuvar raporu: 95/100', time: '11:30', icon: <TrendingUp className="text-secondary" size={18} /> },
+    { id: 1, type: 'attendance', title: 'Yoklama Girişi', description: `${child?.name || 'Öğrenci'} bugün Matematik dersine katıldı.`, time: '09:15', icon: <UserPlus className="text-green-500" size={18} /> },
+    { id: 2, type: 'grade', title: 'Yeni Not Girildi', description: `Fizik laboratuvar raporu: 95/100`, time: '11:30', icon: <TrendingUp className="text-secondary" size={18} /> },
     { id: 3, type: 'material', title: 'Ders Materyali', description: 'Biyoloji: Hücre Bölünmesi dökümanı paylaşıldı.', time: '13:45', icon: <BookOpen className="text-primary" size={18} /> },
-    { id: 4, type: 'behavior', title: 'Öğretmen Notu', description: 'Ali grup çalışmasında liderlik gösterdi.', time: '15:20', icon: <Star className="text-orange-400" size={18} fill="currentColor" /> },
+    { id: 4, type: 'behavior', title: 'Öğretmen Notu', description: `${child?.name || 'Öğrenci'} grup çalışmasında liderlik gösterdi.`, time: '15:20', icon: <Star className="text-orange-400" size={18} fill="currentColor" /> },
   ]);
 
   const chartData = realGrades.map(g => ({
@@ -94,30 +97,32 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
         animate={{ opacity: 1, y: 0 }}
       >
         <h2 className="text-3xl font-extrabold text-primary tracking-tight mb-2">📊 Talebe Paneli / {activeTab === 'kts' ? 'Notlarım' : activeTab === 'schedule' ? 'İstatistikler' : 'Ana Sayfa'}</h2>
-        <p className="text-on-surface-variant font-medium">Hoş Geldiniz, {userName}. Bugün akademik durumunuz aşağıdadır.</p>
+        <p className="text-on-surface-variant font-medium">Hoş Geldiniz, {userName}. {child?.name || 'Evladınızın'} akademik durumu aşağıdadır.</p>
       </motion.section>
 
       {/* Talebe Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="info-card text-center">
-          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Öğrenci</p>
+          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Akademik Notun</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-accent">66</span>
-            <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">+2</span>
+            <span className="text-4xl font-black text-accent">{avgGrade}</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${avgGrade >= 85 ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50'}`}>
+              {avgGrade >= 85 ? 'Pekiyi' : 'İyi'}
+            </span>
           </div>
         </div>
         <div className="info-card text-center">
-          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Genel Başarı Oranı</p>
+          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Devamsızlık</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-accent">%84.5</span>
-            <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">1.4</span>
+            <span className="text-4xl font-black text-accent">2</span>
+            <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Gün</span>
           </div>
         </div>
         <div className="info-card text-center">
-          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yoklama Durumu</p>
+          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Bugünkü Yoklama</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-accent">%98</span>
-            <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Tamam</span>
+            <span className="text-4xl font-black text-accent">{child?.status === 'present' ? 'Geldi' : child?.status === 'absent' ? 'Gelmedi' : 'Bekliyor'}</span>
+            <span className={`w-3 h-3 rounded-full animate-pulse ${child?.status === 'present' ? 'bg-green-500' : 'bg-red-500'}`}></span>
           </div>
         </div>
       </div>

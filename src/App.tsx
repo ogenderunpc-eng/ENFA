@@ -15,7 +15,7 @@ import ProfilePage from './pages/ProfilePage';
 import PortalPage from './pages/PortalPage';
 import KTSPage from './pages/KTSPage';
 import HomeworkPage from './pages/HomeworkPage';
-import { auth, db } from './lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, where } from 'firebase/firestore';
 import { seedDatabase } from './lib/seed';
@@ -103,26 +103,19 @@ export default function App() {
     const unsubMessages = onSnapshot(
       query(
         collection(db, 'messages'), 
-        where('senderId', '==', auth.currentUser?.uid || 'anonymous'),
-        orderBy('createdAt', 'asc')
+        orderBy('createdAt', 'desc')
       ), 
-      (sentSnapshot) => {
-        const sent = sentSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-        
-        onSnapshot(
-          query(
-            collection(db, 'messages'), 
-            where('recipientId', '==', auth.currentUser?.uid || 'anonymous'),
-            orderBy('createdAt', 'asc')
-          ), 
-          (receivedSnapshot) => {
-            const received = receivedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-            const allMessages = [...sent, ...received].sort((a, b) => 
-              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-            );
-            setMessages(allMessages);
-          }
+      (snapshot) => {
+        const all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+        const filtered = all.filter(msg => 
+          msg.recipientId === auth.currentUser?.uid || 
+          msg.senderId === auth.currentUser?.uid ||
+          role === 'teacher'
         );
+        setMessages(filtered);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'messages');
       }
     );
 

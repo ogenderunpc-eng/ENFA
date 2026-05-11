@@ -14,14 +14,20 @@ service cloud.firestore {
         request.auth.token.email == 'ogenderunpc@gmail.com'
       ); 
     }
-    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    // Strict verification except for known test accounts in this sandbox environment
+    function isVerified() { 
+      return isSignedIn() && (
+        request.auth.token.email_verified == true || 
+        request.auth.token.email in ['ogretmen@example.com', 'ogrenci@example.com']
+      ); 
+    }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
 
     // 1. Relational Gate (Teachers)
     function isTeacher() { 
-      return isSignedIn() && (
+      return isVerified() && (
         exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) ||
         isAdmin()
       );
@@ -31,28 +37,47 @@ service cloud.firestore {
     function isValidStudent(data) {
       return data.keys().hasAll(['name', 'number']) &&
              data.name is string && data.name.size() <= 200 &&
-             data.number is string && data.number.size() <= 50 &&
-             (!('grades' in data) || data.grades is list) &&
-             (!('ktsResults' in data) || data.ktsResults is list);
+             data.number is string && data.number.size() <= 64 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 128)) &&
+             (!('class' in data) || (data.class is string && data.class.size() <= 50)) &&
+             (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000)) &&
+             (!('role' in data) || (data.role is string && data.role.size() <= 50)) &&
+             (!('attendance' in data) || (data.attendance is number)) &&
+             (!('status' in data) || (data.status is string && data.status.size() <= 20)) &&
+             (!('grades' in data) || (data.grades is list && data.grades.size() <= 500)) &&
+             (!('ktsResults' in data) || (data.ktsResults is list && data.ktsResults.size() <= 500)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidTeacher(data) {
+      return data.keys().hasAll(['name', 'email']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 128 &&
+             (!('role' in data) || (data.role == 'teacher'));
     }
 
     function isValidMessage(data) {
       return data.keys().hasAll(['sender', 'content']) &&
              data.sender is string && data.sender.size() <= 200 &&
-             data.content is string && data.content.size() <= 2000 &&
-             (data.get('time', '') is string) &&
-             (data.get('senderRole', '') is string);
+             data.content is string && data.content.size() <= 3000 &&
+             (!('recipientId' in data) || (data.recipientId is string && data.recipientId.size() <= 128)) &&
+             (data.get('time', '') is string && data.get('time', '').size() <= 100) &&
+             (data.get('senderRole', '') is string && data.get('senderRole', '').size() <= 50) &&
+             (data.get('createdAt', '') is string && data.get('createdAt', '').size() <= 100);
     }
 
     function isValidClass(data) {
         return data.keys().hasAll(['title', 'time']) &&
-               data.title is string && data.title.size() <= 200;
+               data.title is string && data.title.size() <= 200 &&
+               data.time is string && data.time.size() <= 100;
     }
 
     function isValidAttendance(data) {
       return data.keys().hasAll(['studentId', 'date', 'status']) &&
-             data.studentId is string && data.date is string &&
-             data.status is string && (data.status == 'present' || data.status == 'absent');
+             data.studentId is string && data.studentId.size() <= 128 &&
+             data.date is string && data.date.size() <= 100 &&
+             data.status is string && (data.status == 'present' || data.status == 'absent' || data.status == 'late');
     }
 
     function isValidNotification(data) {
@@ -60,68 +85,71 @@ service cloud.firestore {
              data.userId is string && data.userId.size() <= 128 &&
              data.title is string && data.title.size() <= 200 &&
              data.content is string && data.content.size() <= 2000 &&
-             (data['type'] == 'message' || data['type'] == 'exam' || data['type'] == 'performance' || data['type'] == 'system') &&
+             (data['type'] in ['message', 'exam', 'performance', 'system']) &&
              data.isRead is bool &&
-             data.createdAt is string;
+             data.createdAt is string && data.createdAt.size() <= 100;
     }
 
     function isValidHomework(data) {
       return data.keys().hasAll(['title', 'description', 'deadline', 'teacherId', 'classId', 'createdAt']) &&
              data.title is string && data.title.size() <= 200 &&
-             data.description is string && data.description.size() <= 2000 &&
-             data.deadline is string &&
-             data.teacherId is string &&
-             data.classId is string &&
-             data.createdAt is string;
+             data.description is string && data.description.size() <= 3000 &&
+             data.deadline is string && data.deadline.size() <= 100 &&
+             data.teacherId is string && data.teacherId.size() <= 128 &&
+             data.classId is string && data.classId.size() <= 128 &&
+             data.createdAt is string && data.createdAt.size() <= 100;
     }
 
     // --- Collections ---
 
     match /homework/{homeworkId} {
       allow read: if isSignedIn();
-      allow create: if isTeacher() && isValidHomework(incoming());
-      allow update: if isTeacher() && resource.data.teacherId == request.auth.uid && isValidHomework(incoming());
-      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+      allow create: if isTeacher() && isValidId(homeworkId) && isValidHomework(incoming());
+      allow update: if isTeacher() && isValidId(homeworkId) && resource.data.teacherId == request.auth.uid && isValidHomework(incoming());
+      allow delete: if isTeacher() && isValidId(homeworkId) && resource.data.teacherId == request.auth.uid;
     }
 
     match /students/{studentId} {
-      allow read: if isSignedIn();
-      allow create: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidStudent(incoming());
-      allow update: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidStudent(incoming());
-      allow delete: if isTeacher();
+      allow list: if isSignedIn() && (isTeacher() || request.auth.uid == studentId);
+      allow get: if isSignedIn() && (isTeacher() || request.auth.uid == studentId);
+      allow create: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidId(studentId) && isValidStudent(incoming());
+      allow update: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidId(studentId) && isValidStudent(incoming());
+      allow delete: if isTeacher() && isValidId(studentId);
     }
 
     match /messages/{messageId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidMessage(incoming());
+      allow list: if isSignedIn() && (resource.data.recipientId == request.auth.uid || isTeacher());
+      allow get: if isSignedIn() && (resource.data.recipientId == request.auth.uid || isTeacher());
+      allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming());
       allow update: if false;
-      allow delete: if isTeacher();
+      allow delete: if isTeacher() && isValidId(messageId);
     }
 
     match /classes/{classId} {
       allow read: if isSignedIn();
-      allow write: if isTeacher() && isValidClass(incoming());
+      allow write: if isTeacher() && isValidId(classId) && isValidClass(incoming());
     }
 
     match /attendance/{attendanceId} {
       allow read: if isSignedIn();
-      allow create, update: if isTeacher() && isValidAttendance(incoming());
-      allow delete: if isTeacher();
+      allow create, update: if isTeacher() && isValidId(attendanceId) && isValidAttendance(incoming());
+      allow delete: if isTeacher() && isValidId(attendanceId);
     }
 
     match /notifications/{notificationId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && isValidNotification(incoming());
-      allow update: if isSignedIn() && isValidNotification(incoming()) && 
+      allow read: if isSignedIn() && isValidId(notificationId) && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming());
+      allow update: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && 
                        resource.data.userId == request.auth.uid && 
                        incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && isValidId(notificationId) && resource.data.userId == request.auth.uid;
     }
 
     match /teachers/{teacherId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == teacherId;
-      allow update, delete: if isAdmin();
+      allow create: if isSignedIn() && isValidId(teacherId) && request.auth.uid == teacherId && isValidTeacher(incoming());
+      allow update: if isAdmin() && isValidId(teacherId) && isValidTeacher(incoming());
+      allow delete: if isAdmin() && isValidId(teacherId);
     }
 
     match /yoneticiler/{adminId} {

@@ -80,7 +80,31 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     
     try {
       try {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Ensure user document exists in their respective collection (idempotent)
+        const collectionName = selectedRole === 'teacher' ? 'teachers' : 'students';
+        const userDocRef = doc(db, collectionName, user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (!userDoc.exists()) {
+          if (selectedRole === 'teacher') {
+            await setDoc(userDocRef, {
+              name: email.split('@')[0],
+              role: 'teacher',
+              email: email
+            });
+          } else {
+            await setDoc(userDocRef, {
+              name: email.split('@')[0],
+              role: 'parent',
+              email: email,
+              number: Math.floor(Math.random() * 9000 + 1000).toString(),
+              grades: []
+            });
+          }
+        }
       } catch (signInError: any) {
         if (signInError.code === 'auth/operation-not-allowed') {
           throw signInError;

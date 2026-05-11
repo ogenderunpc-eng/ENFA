@@ -7,10 +7,12 @@
       "properties": {
         "name": { "type": "string" },
         "number": { "type": "string" },
+        "email": { "type": "string" },
         "avatar": { "type": "string" },
         "class": { "type": "string" },
-        "parentName": { "type": "string" },
-        "password": { "type": "string" },
+        "role": { "type": "string" },
+        "attendance": { "type": "number" },
+        "status": { "type": "string" },
         "grades": {
           "type": "array",
           "items": {
@@ -30,16 +32,12 @@
               "id": { "type": "string" },
               "examName": { "type": "string" },
               "date": { "type": "string" },
-              "correct": { "type": "number" },
-              "wrong": { "type": "number" },
-              "empty": { "type": "number" },
-              "score": { "type": "number" },
-              "rankClass": { "type": "number" },
-              "rankSchool": { "type": "number" },
-              "rankGeneral": { "type": "number" }
+              "score": { "type": "number" }
             }
           }
-        }
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
       "required": ["name", "number"]
     },
@@ -52,11 +50,10 @@
         "senderRole": { "type": "string" },
         "content": { "type": "string" },
         "time": { "type": "string" },
-        "avatar": { "type": "string" },
-        "senderId": { "type": "string" },
-        "recipientId": { "type": "string" }
+        "recipientId": { "type": "string" },
+        "createdAt": { "type": "string" }
       },
-      "required": ["sender", "content", "time"]
+      "required": ["sender", "content", "time", "recipientId"]
     },
     "Class": {
       "title": "Class",
