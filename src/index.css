@@ -5,18 +5,18 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-headline: "Manrope", sans-serif;
   
-  --color-primary: #001e40;
-  --color-primary-container: #003366;
-  --color-secondary: #006b5e;
-  --color-secondary-container: #94f0df;
-  --color-surface: #f9f9fe;
-  --color-surface-container: #eeedf2;
-  --color-surface-container-low: #f4f3f8;
+  --color-primary: #000000;
+  --color-primary-container: #1a1a1a;
+  --color-secondary: #E1AD01;
+  --color-secondary-container: #fff4cc;
+  --color-surface: #FDFDFD;
+  --color-surface-container: #f1f3f5;
+  --color-surface-container-low: #FDFDFD;
   --color-surface-container-lowest: #ffffff;
-  --color-on-surface: #1a1c1f;
-  --color-on-surface-variant: #43474f;
-  --color-outline: #737780;
-  --color-outline-variant: #c3c6d1;
+  --color-on-surface: #1a1c1e;
+  --color-on-surface-variant: #44474e;
+  --color-outline: #74777f;
+  --color-outline-variant: #c4c6cf;
 }
 
 @layer base {
@@ -30,7 +30,7 @@
 }
 
 .bg-login-gradient {
-  background: linear-gradient(135deg, #001e40 0%, #003366 100%);
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
 }
 
 .custom-scrollbar::-webkit-scrollbar {

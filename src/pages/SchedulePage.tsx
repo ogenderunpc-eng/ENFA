@@ -172,7 +172,7 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
                 <div className="flex -space-x-2">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
-                      <img src={`https://i.pravatar.cc/150?u=${i + 10}`} alt="Student" referrerPolicy="no-referrer" />
+                      <img src={`https://i.pravatar.cc/150?u=${i + 10}`} alt="Talebe" referrerPolicy="no-referrer" />
                     </div>
                   ))}
                   <div className="w-8 h-8 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface-variant">+24</div>

@@ -10,9 +10,10 @@ interface ParentDashboardProps {
   userName: string;
   onNavigate?: (tab: string) => void;
   students?: Student[];
+  activeTab?: string;
 }
 
-export default function ParentDashboard({ onNavigate, messages, userName, students = [] }: ParentDashboardProps) {
+export default function ParentDashboard({ onNavigate, messages, userName, students = [], activeTab = 'home' }: ParentDashboardProps) {
   const [showNotification, setShowNotification] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
@@ -34,260 +35,124 @@ export default function ParentDashboard({ onNavigate, messages, userName, studen
   }));
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       <motion.section
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h2 className="text-3xl font-extrabold text-primary tracking-tight mb-2">Hoş Geldiniz, {userName}</h2>
-        <p className="text-on-surface-variant font-medium">Ali'nin bugünkü akademik durumu ve güncellemeleri aşağıdadır.</p>
+        <h2 className="text-3xl font-extrabold text-primary tracking-tight mb-2">📊 Talebe Paneli / {activeTab === 'kts' ? 'Notlarım' : activeTab === 'schedule' ? 'İstatistikler' : 'Ana Sayfa'}</h2>
+        <p className="text-on-surface-variant font-medium">Hoş Geldiniz, {userName}. Bugün akademik durumunuz aşağıdadır.</p>
       </motion.section>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Notification Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="col-span-12 md:col-span-8 bg-surface-container-lowest rounded-xl p-6 relative overflow-hidden shadow-[0_12px_40px_rgba(0,30,64,0.06)] border-l-4 border-secondary"
-        >
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-3 w-3 rounded-full bg-error relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
-              </span>
-              <h3 className="text-lg font-bold text-primary">Yeni Duyuru</h3>
-            </div>
-            <span className="text-xs font-medium text-on-surface-variant bg-surface-container px-2 py-1 rounded">2 saat önce</span>
+      {/* Talebe Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Öğrenci</p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-4xl font-black text-secondary">66</span>
+            <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">+2</span>
           </div>
-          <p className="text-on-surface font-medium mb-4 leading-relaxed">
-            Matematik öğretmeni Zeynep Hanım bir not paylaştı: "Ali bugün derste sayılarla kavga etti, 7 rakamı 8'i yemiş diyorlar. Lütfen evde rakamları barıştırın, yoksa matematik ormanı birbirine girecek."
-          </p>
-          <button 
-            onClick={() => onNavigate?.('messages')}
-            className="text-sm font-bold text-secondary flex items-center gap-1 hover:gap-2 transition-all border-none bg-transparent"
-          >
-            Yanıtla <ArrowRight size={18} />
-          </button>
-        </motion.div>
-
-        {/* Grade Update Snapshot (Real Data) */}
-        {realGrades.slice(-1).map((update, idx) => (
-          <motion.div 
-            key={idx}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="col-span-12 md:col-span-4 bg-primary-container rounded-xl p-6 text-white flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <Star className="text-secondary-container" size={32} fill="currentColor" />
-                <span className="bg-white/10 text-[10px] px-2 py-1 rounded-full uppercase tracking-widest font-bold">Yeni Not Girildi</span>
-              </div>
-              <h3 className="text-2xl font-headline font-bold mb-1">{update.subject}: {update.value}</h3>
-              <p className="text-white/60 text-sm">{update.date} tarihinde eklendi.</p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-white/10">
-              <p className="text-xs text-white/60">Başarı Durumu: {update.value > 85 ? 'Mükemmel' : update.value > 70 ? 'İyi' : 'Geliştirilmeli'}</p>
-            </div>
-          </motion.div>
-        ))}
-
-        {realGrades.length === 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="col-span-12 md:col-span-4 bg-surface-container-low rounded-xl p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-outline-variant/30"
-          >
-            <BookOpen className="text-primary/20 mb-3" size={32} />
-            <p className="text-sm font-bold text-primary">Henüz Not Girilmedi</p>
-            <p className="text-[10px] text-on-surface-variant font-medium">Öğretmen not girdiğinde burada görünecektir.</p>
-          </motion.div>
-        )}
-
-        {/* Performance Chart (Real Data) */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="col-span-12 md:col-span-7 bg-surface-container-low rounded-xl p-8"
-        >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <div>
-                <h3 className="text-xl font-bold text-primary mb-1">Ders Bazlı Gelişim</h3>
-                <p className="text-sm text-on-surface-variant">Gerçek Zamanlı Performans Analizi</p>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-secondary"></span>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">{child?.name?.split(' ')[0] || 'Öğrenci'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-outline-variant"></span>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Hedef</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          
-          <div className="h-64 flex items-end justify-start gap-6 px-4 overflow-x-auto no-scrollbar pb-2">
-            {chartData.length > 0 ? chartData.map((data, i) => (
-              <div key={i} className="min-w-[50px] flex-1 flex flex-col items-center gap-2">
-                <div className="w-full flex items-end justify-center gap-1 h-full">
-                  <motion.div 
-                    initial={{ height: 0 }}
-                    animate={{ height: `85%` }}
-                    transition={{ duration: 1, delay: 0.4 + i * 0.1 }}
-                    className="w-3 bg-outline-variant/30 rounded-t-sm" 
-                  />
-                  <motion.div 
-                    initial={{ height: 0 }}
-                    animate={{ height: `${data.value}%` }}
-                    transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
-                    className="w-3 bg-secondary rounded-t-sm" 
-                  />
-                </div>
-                <span className="text-[9px] font-black text-primary truncate w-full text-center uppercase tracking-tighter">
-                  {data.label}
-                </span>
-                <span className="text-[10px] font-bold text-secondary">{data.value}</span>
-              </div>
-            )) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-center opacity-30">
-                <BarChart3 size={48} className="mb-2" />
-                <p className="text-xs font-bold uppercase tracking-widest">Gösterilecek veri yok</p>
-              </div>
-            )}
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Genel Başarı Oranı</p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-4xl font-black text-secondary">%84.5</span>
+            <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">1.4</span>
           </div>
-        </motion.div>
-
-        {/* Recent Messages for Parent */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="col-span-12 md:col-span-5 bg-surface-container-low rounded-xl p-6 flex flex-col"
-        >
-          <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
-            <MessageSquare className="text-secondary" size={20} />
-            Son Mesajlar
-          </h3>
-          <div className="space-y-4 mb-4">
-            {messages.slice(0, 3).map((msg) => (
-              <div key={msg.id} className="p-3 bg-white rounded-lg border border-outline-variant/10 shadow-sm">
-                <div className="flex justify-between mb-1">
-                  <span className="text-xs font-bold text-primary">{msg.sender}</span>
-                  <span className="text-[10px] text-outline">{msg.time}</span>
-                </div>
-                <p className="text-[11px] text-on-surface-variant line-clamp-1">{msg.content}</p>
-              </div>
-            ))}
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yoklama Durumu</p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-4xl font-black text-secondary">%98</span>
+            <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Tamam</span>
           </div>
-          <button 
-            onClick={() => onNavigate?.('messages')}
-            className="mt-auto text-sm font-bold text-secondary flex items-center gap-1 hover:underline bg-transparent border-none"
-          >
-            Tüm Mesajları Gör <ArrowRight size={16} />
-          </button>
-        </motion.div>
-
-        {/* Teacher Comments */}
-        <div className="col-span-12 md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-surface-container-highest/30 backdrop-blur-md rounded-xl p-6 border border-white/20"
-          >
-            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
-              <MessageSquare className="text-secondary" size={20} />
-              Öğretmen Görüşleri
-            </h3>
-            <div className="space-y-6">
-              {TEACHER_COMMENTS.map((comment, i) => (
-                <div key={comment.id} className="relative pl-6">
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-full ${i === 0 ? 'bg-secondary-container' : 'bg-primary-fixed-dim'}`}></div>
-                  <p className="text-sm font-medium italic text-on-surface leading-relaxed mb-2">
-                    "{comment.comment}"
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden">
-                      <img className="w-full h-full object-cover" src={comment.avatar || `https://ui-avatars.com/api/?name=${comment.teacherName}`} alt={comment.teacherName} referrerPolicy="no-referrer" />
-                    </div>
-                    <span className="text-[11px] font-bold text-on-surface-variant">{comment.teacherName}, {comment.subject}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-primary text-white rounded-xl p-6 flex items-center justify-between group cursor-pointer hover:bg-opacity-95 transition-all"
-          >
-            <div>
-              <h4 className="font-bold text-lg">Veli Toplantısı</h4>
-              <p className="text-white/60 text-xs">14 Aralık Perşembe, 18:30</p>
-            </div>
-            <Calendar className="opacity-50 group-hover:opacity-100 transition-opacity" size={32} />
-          </motion.div>
         </div>
       </div>
 
-      {/* Detailed Recent Activities */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Haftalık Başarı Grafiği */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-outline-variant/10"
+        >
+          <h3 className="text-xl font-bold text-primary mb-8">Haftalık Başarı Grafiği</h3>
+          <div className="h-64 flex items-end justify-between gap-2 px-4">
+            {[20, 35, 30, 58, 75, 94].map((height, i) => (
+              <div key={i} className="flex flex-col items-center gap-3 w-full group">
+                <div className="w-full bg-surface-container-high rounded-t-lg relative h-48">
+                  <motion.div 
+                    initial={{ height: 0 }}
+                    animate={{ height: `${height}%` }}
+                    className="absolute bottom-0 w-full bg-primary/20 rounded-t-lg transition-colors group-hover:bg-primary"
+                  />
+                </div>
+                <span className="text-xs font-medium text-outline">
+                  {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][i]}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Puan Dağılımı */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-1 bg-white p-8 rounded-2xl shadow-sm border border-outline-variant/10"
+        >
+          <h3 className="text-xl font-bold text-primary mb-8">Puan Dağılımı</h3>
+          <div className="space-y-6">
+            {[
+              { label: 'Mat', score: 85 },
+              { label: 'Fiz', score: 70 },
+              { label: 'Tür', score: 90 },
+            ].map((item) => (
+              <div key={item.label} className="space-y-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-sm font-bold text-primary">{item.label}</span>
+                  <span className="text-xs font-black text-secondary">{item.score}</span>
+                </div>
+                <div className="h-2 bg-surface-container rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${item.score}%` }}
+                    className="h-full bg-primary"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Recent Activities */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
         className="pt-10 border-t border-outline-variant/10"
       >
         <div className="flex justify-between items-center mb-8">
-          <h3 className="text-2xl font-bold font-headline text-primary flex items-center gap-3">
+          <h3 className="text-2xl font-bold text-primary flex items-center gap-3">
             <Activity className="text-secondary" size={24} />
             Son Etkinlikler
           </h3>
-          <button className="text-xs font-bold text-secondary tracking-widest uppercase hover:underline">Haftalık Döküm</button>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            {activities.slice(0, 2).map((activity) => (
-              <div key={activity.id} className="flex items-start gap-4 p-5 bg-surface-container-low rounded-2xl border border-outline-variant/5 shadow-sm group hover:bg-white hover:shadow-md transition-all">
-                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  {activity.icon}
-                </div>
-                <div className="flex-grow">
-                  <div className="flex justify-between items-start mb-1">
-                    <h5 className="font-bold text-primary">{activity.title}</h5>
-                    <span className="text-[10px] font-medium text-outline">{activity.time}</span>
-                  </div>
-                  <p className="text-xs text-on-surface-variant font-medium leading-relaxed">{activity.description}</p>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {activities.slice(0, 4).map((activity) => (
+            <div key={activity.id} className="flex items-start gap-4 p-5 bg-white rounded-2xl border border-outline-variant/10 shadow-sm">
+              <div className="w-10 h-10 bg-surface-container rounded-xl flex items-center justify-center flex-shrink-0">
+                {activity.icon}
               </div>
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            {activities.slice(2, 4).map((activity) => (
-              <div key={activity.id} className="flex items-start gap-4 p-5 bg-surface-container-low rounded-2xl border border-outline-variant/5 shadow-sm group hover:bg-white hover:shadow-md transition-all">
-                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  {activity.icon}
+              <div>
+                <div className="flex justify-between items-start mb-1">
+                  <h5 className="font-bold text-primary">{activity.title}</h5>
+                  <span className="text-[10px] font-medium text-outline ml-4">{activity.time}</span>
                 </div>
-                <div className="flex-grow">
-                  <div className="flex justify-between items-start mb-1">
-                    <h5 className="font-bold text-primary">{activity.title}</h5>
-                    <span className="text-[10px] font-medium text-outline">{activity.time}</span>
-                  </div>
-                  <p className="text-xs text-on-surface-variant font-medium leading-relaxed">{activity.description}</p>
-                </div>
+                <p className="text-xs text-on-surface-variant font-medium">{activity.description}</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-6">

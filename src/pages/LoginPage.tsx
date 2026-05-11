@@ -148,11 +148,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           className="grid grid-cols-1 lg:grid-cols-12 gap-0 bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_12px_40px_rgba(0,30,64,0.06)] w-full max-w-5xl"
         >
           {/* Left Side: Visual & Branding */}
-          <div className="lg:col-span-5 bg-login-gradient relative p-12 flex flex-col justify-between text-white">
+          <div className="lg:col-span-5 bg-login-gradient relative p-12 flex flex-col justify-between text-white border-b lg:border-b-0 lg:border-r border-secondary/20">
             <div className="z-10">
-              <h1 className="font-headline text-3xl font-extrabold tracking-tight mb-4">OGE Academy</h1>
+              <h1 className="font-headline text-3xl font-extrabold tracking-tight mb-4 text-secondary">OGE ENDERUN</h1>
               <p className="text-white/80 text-lg font-light leading-relaxed max-w-xs">
-                Geleceğin eğitim vizyonuyla, akademik mükemmelliği ve kişisel gelişimi tek bir çatı altında buluşturuyoruz.
+                Başarı Atlası v2.0 ile talebe gelişimini anlık takip edin, akademik zirveye birlikte yürüyün.
               </p>
             </div>
             
@@ -204,28 +204,28 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   <div className="grid grid-cols-1 gap-4">
                     <button 
                       onClick={() => handleRoleSelect('teacher')}
-                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-primary hover:bg-surface-container-high transition-all text-left"
+                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-white transition-all text-left shadow-sm"
                     >
-                      <div className="w-16 h-16 rounded-xl bg-primary text-white flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
+                      <div className="w-16 h-16 rounded-xl bg-black text-secondary flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
                         <GraduationCap size={32} />
                       </div>
                       <div>
-                        <h4 className="font-headline font-bold text-primary text-xl">Öğretmen Girişi</h4>
-                        <p className="text-sm text-on-surface-variant">Ders yönetimi ve yoklama paneli</p>
+                        <h4 className="font-headline font-bold text-primary text-xl">Muallim Girişi</h4>
+                        <p className="text-sm text-on-surface-variant italic">Yoklama Al & Not Girişi</p>
                       </div>
-                      <ArrowRight className="ml-auto text-outline group-hover:text-primary group-hover:translate-x-1 transition-all" size={24} />
+                      <ArrowRight className="ml-auto text-outline group-hover:text-secondary group-hover:translate-x-1 transition-all" size={24} />
                     </button>
 
                     <button 
                       onClick={() => handleRoleSelect('parent')}
-                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-surface-container-high transition-all text-left"
+                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-white transition-all text-left shadow-sm"
                     >
-                      <div className="w-16 h-16 rounded-xl bg-secondary text-white flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
+                      <div className="w-16 h-16 rounded-xl bg-secondary text-black flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
                         <Users size={32} />
                       </div>
                       <div>
-                        <h4 className="font-headline font-bold text-primary text-xl">Veli Girişi</h4>
-                        <p className="text-sm text-on-surface-variant">Öğrenci takibi ve performans raporları</p>
+                        <h4 className="font-headline font-bold text-primary text-xl">Talebe Girişi</h4>
+                        <p className="text-sm text-on-surface-variant italic">Notlarım & İstatistikler</p>
                       </div>
                       <ArrowRight className="ml-auto text-outline group-hover:text-secondary group-hover:translate-x-1 transition-all" size={24} />
                     </button>
@@ -249,7 +249,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
                   <header className="mb-10">
                     <h2 className="font-headline text-4xl font-bold text-primary mb-2 tracking-tight">
-                      {selectedRole === 'teacher' ? 'Öğretmen Girişi' : 'Veli Girişi'}
+                      {selectedRole === 'teacher' ? 'Muallim Girişi' : 'Talebe Girişi'}
                     </h2>
                     <p className="text-on-surface-variant">Lütfen kimlik bilgilerinizle giriş yapın.</p>
                   </header>
@@ -259,7 +259,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     <div className="space-y-1">
                       <label className="block text-xs font-bold text-primary uppercase tracking-wider ml-1">E-Posta Adresi</label>
                       <input 
-                        className="w-full bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-primary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
+                        className="w-full bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-secondary py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all" 
                         type="email" 
                         placeholder={selectedRole === 'teacher' ? 'ogretmen@ogeacademy.com' : 'veli@ogeacademy.com'}
                         value={email}
@@ -274,7 +274,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                         <button type="button" className="text-xs font-medium text-secondary hover:underline">Şifremi Unuttum</button>
                       </div>
                       <input 
-                        className={`w-full bg-surface-container-high border-none rounded-xl focus:ring-2 ${error ? 'focus:ring-error ring-2 ring-error' : 'focus:ring-primary'} py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all`} 
+                        className={`w-full bg-surface-container-high border-none rounded-xl focus:ring-2 ${error ? 'focus:ring-error ring-2 ring-error' : 'focus:ring-secondary'} py-4 px-4 text-on-surface placeholder:text-outline-variant transition-all`} 
                         type="password" 
                         placeholder="••••"
                         value={password}
@@ -311,19 +311,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                           type="button"
                           className="bg-surface-container-low text-primary text-[10px] font-bold py-2 rounded-xl border border-outline-variant/10 hover:bg-surface-container-high transition-all"
                         >
-                          Öğretmen Test Hesabı
+                          Muallim Test Hesabı
                         </button>
                         <button 
                           onClick={fillStudentCredentials}
                           type="button"
                           className="bg-surface-container-low text-primary text-[10px] font-bold py-2 rounded-xl border border-outline-variant/10 hover:bg-surface-container-high transition-all"
                         >
-                          Öğrenci Test Hesabı
+                          Talebe Test Hesabı
                         </button>
                       </div>
 
                       <button 
-                        className={`w-full ${selectedRole === 'teacher' ? 'bg-primary' : 'bg-secondary'} text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50`} 
+                        className={`w-full ${selectedRole === 'teacher' ? 'bg-black border border-secondary text-white' : 'bg-secondary text-black'} font-headline font-bold py-4 rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50`} 
                         type="submit"
                         disabled={loading}
                       >
@@ -341,7 +341,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
       <footer className="w-full py-8 text-center border-t border-outline-variant/15">
         <p className="text-xs text-on-surface-variant/60 font-medium tracking-wide">
-          © 2024 OGE Academy Bilgi Sistemleri. Tüm hakları saklıdır.
+          © 2024 Enderun Başarı Atlası. Tüm hakları saklıdır.
         </p>
       </footer>
 

@@ -116,7 +116,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
       >
         <div>
           <h2 className="text-3xl font-black text-primary tracking-tight">KTS Denemeleri</h2>
-          <p className="text-on-surface-variant font-medium mt-1">Öğrenci gelişim ve sınav başarı raporları.</p>
+          <p className="text-on-surface-variant font-medium mt-1">Talebe gelişim ve sınav başarı raporları.</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -133,7 +133,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={20} />
               <input 
                 type="text" 
-                placeholder="Öğrenci veya No Ara..."
+                placeholder="Talebe veya No Ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white border border-outline-variant/10 rounded-2xl py-4 pl-12 pr-4 text-sm shadow-sm focus:ring-2 focus:ring-primary/10 transition-all outline-none"
@@ -153,7 +153,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
           >
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/5">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-black text-primary uppercase tracking-widest">Öğrenci Listesi</h3>
+                <h3 className="text-sm font-black text-primary uppercase tracking-widest">Talebe Listesi</h3>
                 <span className="bg-primary/5 text-primary text-[10px] font-black px-2 py-1 rounded-md">{filteredStudents.length}</span>
               </div>
               <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -405,7 +405,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                     </div>
                     <h4 className="text-xs font-black text-primary uppercase tracking-widest">Sınıf Mevcudu</h4>
                   </div>
-                  <p className="text-3xl font-black text-primary">{students.length} Öğrenci</p>
+                  <p className="text-3xl font-black text-primary">{students.length} Talebe</p>
                   <p className="text-[10px] text-on-surface-variant font-bold mt-1 tracking-widest">AKTİF KAYITLI</p>
                 </div>
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/5">
@@ -658,9 +658,9 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                    </div>
 
                    <div className="bg-primary text-white rounded-3xl p-6">
-                      <h5 className="text-xs font-bold uppercase tracking-widest mb-4 opacity-80">AI Gelişim Tavsiyesi</h5>
+                      <h5 className="text-xs font-bold uppercase tracking-widest mb-4 opacity-80">Enderun Gelişim Tavsiyesi</h5>
                       <p className="text-xs leading-relaxed opacity-90">
-                        Öğrencinin Fen Bilimleri dersinde "Madde ve Isı" ünitesindeki yanlış oranı dikkat çekiyor. Bir sonraki denemeye kadar bu ünite üzerindeki eksik kazanımlar tamamlanmalıdır.
+                        Talebenin Fen Bilimleri dersinde "Madde ve Isı" ünitesindeki yanlış oranı dikkat çekiyor. Bir sonraki denemeye kadar bu ünite üzerindeki eksik kazanımlar tamamlanmalıdır.
                       </p>
                    </div>
                 </div>

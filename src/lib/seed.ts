@@ -27,18 +27,18 @@ export async function seedDatabase() {
     if (messagesSnap.empty) {
       console.log('Seeding messages...');
       for (const msg of MESSAGES) {
-        await setDoc(doc(db, 'messages', msg.id), msg);
+        await setDoc(doc(db, 'messages', msg.id), {
+          ...msg,
+          createdAt: new Date().toISOString()
+        });
       }
     }
 
     // Ensure specific admin record exists for the developer
     const adminEmail = 'ogenderunpc@gmail.com';
-    const adminsSnap = await getDocs(collection(db, 'admins'));
+    const adminsSnap = await getDocs(collection(db, 'yoneticiler'));
     if (adminsSnap.empty) {
       console.log('Creating initial admin record...');
-      // This document will be used by firestore.rules to verify admin status
-      // The user needs to be logged in first to get their UID correctly in production,
-      // but we can pre-seed if we have a known UID or handle it in App.tsx after login.
     }
     
     const teachersSnap = await getDocs(collection(db, 'teachers'));

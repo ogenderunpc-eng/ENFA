@@ -166,10 +166,10 @@ export default function App() {
     switch (activeTab) {
       case 'home':
         return role === 'teacher' 
-          ? <TeacherDashboard messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} /> 
-          : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} />;
+          ? <TeacherDashboard messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} activeTab={activeTab} /> 
+          : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} activeTab={activeTab} />;
       case 'portal':
-        return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} />;
+        return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} activeTab={activeTab} />;
       case 'kts':
         return <KTSPage students={students} setStudents={setStudents} role={role} />;
       case 'schedule':
@@ -202,6 +202,7 @@ export default function App() {
     <Layout 
       role={role} 
       onSwitchRole={handleSwitchRole} 
+      onLogout={handleLogout}
       activeTab={activeTab} 
       setActiveTab={setActiveTab}
       userAvatar={userAvatar}

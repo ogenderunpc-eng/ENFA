@@ -208,7 +208,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
       <section>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h3 className="text-2xl font-bold text-primary mb-1">Öğrenci Listesi & Yoklama</h3>
+            <h3 className="text-2xl font-bold text-primary mb-1">Talebe Listesi & Yoklama</h3>
             <p className="text-sm text-on-surface-variant font-medium">Bugünkü dersler için katılım durumunu işaretleyin ve not girişi yapın.</p>
           </div>
           
@@ -234,7 +234,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" size={18} />
               <input 
                 type="text" 
-                placeholder="Öğrenci ara..." 
+                placeholder="Talebe ara..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="bg-surface-container-low border-none rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary transition-all"
@@ -262,7 +262,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest">Öğrenci</th>
+                  <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest">Talebe</th>
                   <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest">Numara</th>
                   <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest text-center">Yoklama</th>
                   <th className="p-5 text-xs font-bold text-primary uppercase tracking-widest text-right">İşlemler</th>
@@ -368,7 +368,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8"
             >
-              <h4 className="text-2xl font-bold text-primary mb-6">Yeni Öğrenci Ekle</h4>
+              <h4 className="text-2xl font-bold text-primary mb-6">Yeni Talebe Ekle</h4>
               <form onSubmit={handleAddStudent} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Ad Soyad</label>
@@ -382,7 +382,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Öğrenci Numarası</label>
+                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Okul Numarası</label>
                   <input 
                     type="text" 
                     value={newStudent.number}
@@ -393,7 +393,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Giriş Şifresi (Veli/Öğrenci)</label>
+                  <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Giriş Şifresi</label>
                   <input 
                     type="text" 
                     value={newStudent.password}

@@ -20,9 +20,10 @@ interface TeacherDashboardProps {
   students: Student[];
   setClasses: (classes: ClassSession[] | ((prev: ClassSession[]) => ClassSession[])) => void;
   onNavigate?: (tab: string) => void;
+  activeTab?: string;
 }
 
-export default function TeacherDashboard({ classes, messages, students, setClasses, onNavigate }: TeacherDashboardProps) {
+export default function TeacherDashboard({ classes, messages, students, setClasses, onNavigate, activeTab = 'home' }: TeacherDashboardProps) {
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [isViewingReport, setIsViewingReport] = useState(false);
   const [isTakingAttendance, setIsTakingAttendance] = useState(false);
@@ -77,7 +78,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
     setIsGeneratingAIReport(true);
     setAiReportContent('');
     
-    const text = "Bugünkü matematik dersinde öğrencilerin türev ve integral arasındaki ilişkiyi kavrama oranı oldukça yüksekti. Özellikle Ali ve Zeynep'in aktif katılımı dikkat çekti. Sınıfın %85'i verilen pratik problemleri başarıyla tamamladı. Gelecek ders için karmaşık sayılara giriş yapılması planlanmaktadır.";
+    const text = "Bugünkü matematik dersinde talebelerin türev ve integral arasındaki ilişkiyi kavrama oranı oldukça yüksekti. Özellikle Ali ve Zeynep'in aktif katılımı dikkat çekti. Sınıfın %85'i verilen pratik problemleri başarıyla tamamladı. Gelecek ders için karmaşık sayılara giriş yapılması planlanmaktadır.";
     
     let i = 0;
     const interval = setInterval(() => {
@@ -223,8 +224,8 @@ export default function TeacherDashboard({ classes, messages, students, setClass
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <p className="text-secondary font-semibold tracking-wide uppercase text-xs mb-2">Hoş Geldiniz, Sayın Yılmaz</p>
-            <h2 className="text-4xl font-extrabold text-primary leading-tight">Eğitim portalı bugün <br/>sizin için hazır.</h2>
+            <p className="text-secondary font-semibold tracking-wide uppercase text-xs mb-2">Hoş Geldiniz, Muallim Yılmaz</p>
+            <h2 className="text-4xl font-extrabold text-primary leading-tight">📊 Muallim Paneli / {activeTab === 'portal' ? 'Yoklama Al' : activeTab === 'kts' ? 'Not Girişi' : 'Sınıf Özeti'}</h2>
           </motion.div>
           
             <div className="flex flex-wrap gap-3">
@@ -262,6 +263,118 @@ export default function TeacherDashboard({ classes, messages, students, setClass
           </div>
         </div>
       </section>
+
+        {/* Muallim Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Öğrenci</p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-4xl font-black text-secondary">66</span>
+              <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">+2</span>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Genel Başarı Oranı</p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-4xl font-black text-secondary">%84.5</span>
+              <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">1.4</span>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yoklama Durumu</p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-4xl font-black text-secondary">%98</span>
+              <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Tamam</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sınıf Özeti & Hızlı Not Girişi */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10">
+            <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+              <BarChart3 className="text-secondary" size={24} />
+              Ders Bazlı Puan Dağılımı (9-A)
+            </h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-on-surface-variant">Matematik</span>
+                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-[80%]"></div>
+                </div>
+                <span className="text-xs font-bold text-primary">%80</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-on-surface-variant">Fizik</span>
+                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-[60%]"></div>
+                </div>
+                <span className="text-xs font-bold text-primary">%60</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-on-surface-variant">Türkçe</span>
+                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-[95%]"></div>
+                </div>
+                <span className="text-xs font-bold text-primary">%95</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-on-surface-variant">Kimya</span>
+                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-[70%]"></div>
+                </div>
+                <span className="text-xs font-bold text-primary">%70</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10">
+            <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+              <Plus className="text-secondary" size={24} />
+              Hızlı Not Girişi
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-outline-variant/10">
+                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Talebe Adı</th>
+                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Numara</th>
+                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Matematik</th>
+                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Durum</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/5">
+                  {[
+                    { name: 'Kerem Yılmaz', no: 101, grade: 85, status: '✅ Onaylı' },
+                    { name: 'Zeynep Aksoy', no: 102, grade: 92, status: '✅ Onaylı' },
+                    { name: 'Elif Demir', no: 103, grade: 78, status: '⏳ Bekliyor' }
+                  ].map((row, i) => (
+                    <tr key={i} className="hover:bg-surface-container-low transition-colors group cursor-pointer">
+                      <td className="py-3 text-sm font-bold text-primary">{row.name}</td>
+                      <td className="py-3 text-xs font-medium text-on-surface-variant font-mono">{row.no}</td>
+                      <td className="py-3">
+                        <input 
+                          type="number" 
+                          defaultValue={row.grade} 
+                          className="w-16 bg-surface-container-high border-none rounded-lg py-1 px-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                        />
+                      </td>
+                      <td className="py-3 text-[10px] font-bold">{row.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mt-6 flex justify-end">
+                <button 
+                  onClick={() => onNavigate?.('portal')}
+                  className="text-xs font-black text-secondary tracking-widest uppercase hover:underline"
+                >
+                  Tüm Listeyi Gör
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
       {/* Today's Lessons Section */}
       <section>
@@ -580,7 +693,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                       </div>
                       <div>
                         <p className="text-sm font-bold text-primary">{student.name}</p>
-                        <p className="text-[10px] text-on-surface-variant font-medium">Öğrenci No: #102{student.id}</p>
+                        <p className="text-[10px] text-on-surface-variant font-medium">Talebe No: #102{student.id}</p>
                       </div>
                     </div>
                     <button 

@@ -89,8 +89,9 @@ service cloud.firestore {
     }
 
     match /yoneticiler/{adminId} {
-      allow read: if isSignedIn() && request.auth.uid == adminId;
-      allow write: if false;
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow write: if request.auth.token.email == 'ogenderunpc@gmail.com';
     }
   }
 }

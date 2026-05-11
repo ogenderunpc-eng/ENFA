@@ -20,7 +20,7 @@ interface ProfilePageProps {
 export default function ProfilePage({ role, userAvatar, userName, userEmail, userPhone, isDeviceLinked, setIsDeviceLinked, onLogout, onUpdateAvatar, onUpdateProfile }: ProfilePageProps) {
   const [activeSetting, setActiveSetting] = React.useState<string | null>(null);
   const [showToast, setShowToast] = React.useState(false);
-  const [currentPlan, setCurrentPlan] = React.useState('OGE Pro Plus');
+  const [currentPlan, setCurrentPlan] = React.useState('Enderun Pro');
   
   // Local form states
   const [tempAvatarUrl, setTempAvatarUrl] = React.useState(userAvatar);
@@ -138,7 +138,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                   {userName}
                 </h2>
                 <p className="text-on-surface-variant font-medium">
-                  {role === 'teacher' ? 'Matematik Bölüm Başkanı' : 'Veli'}
+                  {role === 'teacher' ? 'Matematik Muallimi' : 'Veli'}
                 </p>
               </div>
             </section>
@@ -388,12 +388,12 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                   </div>
                   <div>
                     <h4 className="text-xl font-black text-primary">
-                      {isDeviceLinked ? 'Cihaz Bağlandı' : 'OGE Academy Mobil'}
+                      {isDeviceLinked ? 'Cihaz Bağlandı' : 'Enderun Mobil'}
                     </h4>
                     <p className="text-sm text-on-surface-variant">
                       {isDeviceLinked 
                         ? 'iPhone 15 Pro cihazınız başarıyla hesabınızla eşleştirildi.' 
-                        : 'OGE Academy deneyimini telefonunuza taşıyın ve anlık bildirimlerle her şeyden haberdar olun.'}
+                        : 'Enderun deneyimini telefonunuza taşıyın ve anlık bildirimlerle her şeyden haberdar olun.'}
                     </p>
                   </div>
                 </div>
@@ -708,7 +708,7 @@ export default function ProfilePage({ role, userAvatar, userName, userEmail, use
                       type="email" 
                       value={tempEmail}
                       onChange={(e) => setTempEmail(e.target.value)}
-                      placeholder="eposta@oge.edu" 
+                      placeholder="eposta@enderun.edu" 
                       className="w-full bg-surface-container-low border border-outline-variant/10 rounded-2xl py-4 px-5 text-sm focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all outline-none" 
                     />
                   </div>
