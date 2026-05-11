@@ -19,8 +19,6 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [isEnteringGrade, setIsEnteringGrade] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState(false);
   const [newStudent, setNewStudent] = useState({ name: '', number: '', password: '' });
   const [newGrade, setNewGrade] = useState({ subject: 'Matematik', value: '', note: '' });
 
@@ -147,51 +145,6 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
       } finally {
         setIsDeleting(null);
       }
-    }
-  };
-
-  const handleResetSystem = async () => {
-    if (!resetConfirm) return;
-    if (!window.confirm('DİKKAT: Tüm öğrenci kayıtları ve yoklama verileri KALICI OLARAK silinecektir. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?')) return;
-
-    setIsResetting(true);
-    try {
-      // Delete all attendance records
-      const attendanceSnapshot = await getDocs(collection(db, 'attendance'));
-      const attendanceChunks = [];
-      const attendanceDocs = attendanceSnapshot.docs;
-      for (let i = 0; i < attendanceDocs.length; i += 500) {
-        attendanceChunks.push(attendanceDocs.slice(i, i + 500));
-      }
-
-      for (const chunk of attendanceChunks) {
-        const batch = writeBatch(db);
-        chunk.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-      }
-
-      // Delete all students
-      const studentsSnapshot = await getDocs(collection(db, 'students'));
-      const studentChunks = [];
-      const studentDocs = studentsSnapshot.docs;
-      for (let i = 0; i < studentDocs.length; i += 500) {
-        studentChunks.push(studentDocs.slice(i, i + 500));
-      }
-
-      for (const chunk of studentChunks) {
-        const batch = writeBatch(db);
-        chunk.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-      }
-
-      setSelectedStudents([]);
-      setResetConfirm(false);
-      alert('Sistem başarıyla sıfırlandı.');
-      location.reload();
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, 'system/reset');
-    } finally {
-      setIsResetting(false);
     }
   };
 
@@ -394,51 +347,6 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      </section>
-
-      {/* Danger Zone / System Reset */}
-      <section className="mb-20 px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border-2 border-red-100 rounded-3xl p-8 shadow-sm">
-            <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center text-red-600 flex-shrink-0 animate-pulse">
-                <Trash2 size={32} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-black text-red-700 mb-2">⚠️ TEHLİKELİ BÖLGE: Tüm Verileri Sıfırla</h3>
-                <p className="text-sm text-red-600/80 mb-6 font-medium leading-relaxed">
-                  Bu işlem sistemdeki istisnasız tüm öğrenci kayıtlarını ve yoklama verilerini kalıcı olarak silecektir. 
-                  Bu işlem geri alınamaz ve tüm veriler bulut sunucusundan tamamen kaldırılır.
-                </p>
-                
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                  <label className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl border border-red-200 cursor-pointer hover:bg-red-50 transition-colors w-full md:w-auto">
-                    <input 
-                      type="checkbox" 
-                      checked={resetConfirm}
-                      onChange={(e) => setResetConfirm(e.target.checked)}
-                      className="w-5 h-5 rounded border-red-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                    />
-                    <span className="text-sm font-bold text-red-700">Tüm sistemi sıfırlamak istediğimden eminim.</span>
-                  </label>
-                  
-                  <button 
-                    onClick={handleResetSystem}
-                    disabled={!resetConfirm || isResetting}
-                    className={`flex-1 md:flex-none px-8 py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${
-                      resetConfirm && !isResetting 
-                        ? 'bg-red-600 text-white shadow-lg shadow-red-200 hover:bg-red-700 active:scale-95 cursor-pointer' 
-                        : 'bg-red-200 text-red-400 cursor-not-allowed opacity-50'
-                    }`}
-                  >
-                    {isResetting ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
-                    SİSTEMİ TAMAMEN SIFIRLA
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
