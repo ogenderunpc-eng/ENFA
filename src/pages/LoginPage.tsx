@@ -323,7 +323,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                       </div>
 
                       <button 
-                        className={`w-full ${selectedRole === 'teacher' ? 'bg-black border border-secondary text-white' : 'bg-secondary text-black'} font-headline font-bold py-4 rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50`} 
+                        className={`w-full bg-accent text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50`} 
                         type="submit"
                         disabled={loading}
                       >

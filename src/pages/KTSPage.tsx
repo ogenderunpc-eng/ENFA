@@ -5,6 +5,7 @@ import { Student, Role, KTSResult } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell } from 'recharts';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { notificationService } from '../services/notificationService';
 
 interface KTSPageProps {
   students: Student[];
@@ -55,6 +56,15 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
     try {
       await updateDoc(doc(db, 'students', selectedStudent.id), {
         ktsResults: [result, ...(selectedStudent.ktsResults || [])]
+      });
+      
+      // Notify student/parent about the new result
+      await notificationService.createNotification({
+        userId: selectedStudent.id,
+        title: "Yeni Sınav Sonucu 📊",
+        content: `${result.examName} sonucu açıklandı! Puanınız: ${result.score}`,
+        type: 'performance',
+        link: 'kts'
       });
       
       setShowAddModal(false);

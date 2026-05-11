@@ -55,7 +55,34 @@ service cloud.firestore {
              data.status is string && (data.status == 'present' || data.status == 'absent');
     }
 
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'title', 'content', 'type', 'createdAt', 'isRead']) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 2000 &&
+             (data['type'] == 'message' || data['type'] == 'exam' || data['type'] == 'performance' || data['type'] == 'system') &&
+             data.isRead is bool &&
+             data.createdAt is string;
+    }
+
+    function isValidHomework(data) {
+      return data.keys().hasAll(['title', 'description', 'deadline', 'teacherId', 'classId', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.deadline is string &&
+             data.teacherId is string &&
+             data.classId is string &&
+             data.createdAt is string;
+    }
+
     // --- Collections ---
+
+    match /homework/{homeworkId} {
+      allow read: if isSignedIn();
+      allow create: if isTeacher() && isValidHomework(incoming());
+      allow update: if isTeacher() && resource.data.teacherId == request.auth.uid && isValidHomework(incoming());
+      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
 
     match /students/{studentId} {
       allow read: if isSignedIn();
@@ -80,6 +107,15 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isTeacher() && isValidAttendance(incoming());
       allow delete: if isTeacher();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidNotification(incoming());
+      allow update: if isSignedIn() && isValidNotification(incoming()) && 
+                       resource.data.userId == request.auth.uid && 
+                       incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /teachers/{teacherId} {

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight, BookOpen, BarChart3, CheckCircle2, UserPlus, FileText, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GRADE_UPDATES, TEACHER_COMMENTS } from '../constants';
-import { Student, ClassSession, Message } from '../types';
+import { Student, ClassSession, Message, Homework } from '../types';
+import { notificationService } from '../services/notificationService';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 
 interface ParentDashboardProps {
   classes?: ClassSession[];
@@ -13,12 +16,62 @@ interface ParentDashboardProps {
   activeTab?: string;
 }
 
-export default function ParentDashboard({ onNavigate, messages, userName, students = [], activeTab = 'home' }: ParentDashboardProps) {
+export default function ParentDashboard({ onNavigate, messages, userName, classes = [], students = [], activeTab = 'home' }: ParentDashboardProps) {
   const [showNotification, setShowNotification] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [homeworkList, setHomeworkList] = useState<Homework[]>([]);
   
   // Real child data (assuming first student for demo)
   const child = students[0];
+
+  useEffect(() => {
+    const q = query(collection(db, 'homework'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setHomeworkList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Homework)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'homework');
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!child || !auth.currentUser) return;
+
+    // 1. Check for upcoming exams
+    const upcomingExam = classes?.find(c => (c.title.includes('Sınav') || c.title.includes('KTS')) && c.status === 'next');
+    if (upcomingExam) {
+       const notifiedKey = `notified_exam_${upcomingExam.id}`;
+       if (!sessionStorage.getItem(notifiedKey)) {
+         notificationService.createNotification({
+           userId: auth.currentUser.uid,
+           title: "Yaklaşan Sınav 📝",
+           content: `${upcomingExam.title} dersi yaklaşıyor. Hazırlanmayı unutmayın!`,
+           type: 'exam',
+           link: 'home'
+         });
+         sessionStorage.setItem(notifiedKey, 'true');
+       }
+    }
+
+    // 2. Check for performance changes
+    if (child.grades && child.grades.length > 0) {
+      const lastGrade = child.grades[child.grades.length - 1];
+      if (lastGrade.value >= 90) {
+        const notifiedKey = `notified_perf_${lastGrade.subject}_${lastGrade.value}`;
+        if (!sessionStorage.getItem(notifiedKey)) {
+          notificationService.createNotification({
+            userId: auth.currentUser.uid,
+            title: "Yüksek Başarı! 🌟",
+            content: `${child.name}, ${lastGrade.subject} dersinden ${lastGrade.value} alarak muazzam bir başarı gösterdi!`,
+            type: 'performance',
+            link: 'kts'
+          });
+          sessionStorage.setItem(notifiedKey, 'true');
+        }
+      }
+    }
+  }, [child, classes]);
+  
   const realGrades = child?.grades || [];
   
   const [activities] = useState([
@@ -46,24 +99,24 @@ export default function ParentDashboard({ onNavigate, messages, userName, studen
 
       {/* Talebe Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+        <div className="info-card text-center">
           <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Öğrenci</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-secondary">66</span>
+            <span className="text-4xl font-black text-accent">66</span>
             <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">+2</span>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+        <div className="info-card text-center">
           <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Genel Başarı Oranı</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-secondary">%84.5</span>
+            <span className="text-4xl font-black text-accent">%84.5</span>
             <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">1.4</span>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+        <div className="info-card text-center">
           <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yoklama Durumu</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-secondary">%98</span>
+            <span className="text-4xl font-black text-accent">%98</span>
             <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Tamam</span>
           </div>
         </div>
@@ -80,11 +133,16 @@ export default function ParentDashboard({ onNavigate, messages, userName, studen
           <div className="h-64 flex items-end justify-between gap-2 px-4">
             {[20, 35, 30, 58, 75, 94].map((height, i) => (
               <div key={i} className="flex flex-col items-center gap-3 w-full group">
-                <div className="w-full bg-surface-container-high rounded-t-lg relative h-48">
+                <div className="w-full bg-accent/5 rounded-t-lg relative h-48 overflow-hidden">
                   <motion.div 
                     initial={{ height: 0 }}
                     animate={{ height: `${height}%` }}
-                    className="absolute bottom-0 w-full bg-primary/20 rounded-t-lg transition-colors group-hover:bg-primary"
+                    className="absolute bottom-0 w-full bg-accent/30 rounded-t-lg transition-colors group-hover:bg-accent"
+                  />
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.1 }}
+                    className="absolute inset-0 bg-accent"
                   />
                 </div>
                 <span className="text-xs font-medium text-outline">
@@ -117,7 +175,7 @@ export default function ParentDashboard({ onNavigate, messages, userName, studen
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${item.score}%` }}
-                    className="h-full bg-primary"
+                    className="h-full bg-accent"
                   />
                 </div>
               </div>
@@ -140,7 +198,7 @@ export default function ParentDashboard({ onNavigate, messages, userName, studen
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {activities.slice(0, 4).map((activity) => (
-            <div key={activity.id} className="flex items-start gap-4 p-5 bg-white rounded-2xl border border-outline-variant/10 shadow-sm">
+            <div key={activity.id} className="info-card flex items-start gap-4">
               <div className="w-10 h-10 bg-surface-container rounded-xl flex items-center justify-center flex-shrink-0">
                 {activity.icon}
               </div>
@@ -156,17 +214,17 @@ export default function ParentDashboard({ onNavigate, messages, userName, studen
         </div>
 
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="flex items-center gap-6 p-6 bg-primary/5 rounded-2xl group hover:bg-primary/10 transition-colors border border-primary/10">
-            <div className="w-14 h-14 flex-shrink-0 bg-primary/10 rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
-              <BookOpen className="text-primary" size={28} />
+          <div className="flex items-center gap-6 p-6 bg-accent/5 rounded-2xl group hover:bg-accent/10 transition-colors border border-accent/10">
+            <div className="w-14 h-14 flex-shrink-0 bg-accent/10 rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
+              <BookOpen className="text-accent" size={28} />
             </div>
             <div className="flex-grow">
               <h5 className="font-bold text-primary text-lg">Ödev Takibi</h5>
-              <p className="text-sm text-on-surface-variant font-medium">Bu hafta tamamlanması gereken 3 ödev var.</p>
+              <p className="text-sm text-on-surface-variant font-medium">Bu hafta tamamlanması gereken {homeworkList.length} ödev var.</p>
             </div>
             <button 
-              onClick={() => onNavigate?.('schedule')}
-              className="px-5 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all text-nowrap"
+              onClick={() => onNavigate?.('homework')}
+              className="px-5 py-2 bg-accent text-white rounded-lg font-bold text-sm shadow-lg shadow-accent/20 hover:opacity-90 transition-all text-nowrap"
             >
               Kontrol Et
             </button>
@@ -186,7 +244,7 @@ export default function ParentDashboard({ onNavigate, messages, userName, studen
                 setShowNotification(true);
                 setTimeout(() => setShowNotification(false), 3000);
               }}
-              className="px-5 py-2 bg-secondary text-white rounded-lg font-bold text-sm shadow-lg shadow-secondary/20 hover:opacity-90 transition-all text-nowrap"
+              className="px-5 py-2 bg-accent text-white rounded-lg font-bold text-sm shadow-lg shadow-accent/20 hover:opacity-90 transition-all text-nowrap"
             >
               Raporu Al
             </button>

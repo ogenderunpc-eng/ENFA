@@ -14,6 +14,7 @@ import MessagesPage from './pages/MessagesPage';
 import ProfilePage from './pages/ProfilePage';
 import PortalPage from './pages/PortalPage';
 import KTSPage from './pages/KTSPage';
+import HomeworkPage from './pages/HomeworkPage';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, where } from 'firebase/firestore';
@@ -172,6 +173,8 @@ export default function App() {
         return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} activeTab={activeTab} />;
       case 'kts':
         return <KTSPage students={students} setStudents={setStudents} role={role} />;
+      case 'homework':
+        return <HomeworkPage role={role} students={students} />;
       case 'schedule':
         return <SchedulePage role={role} />;
       case 'messages':
@@ -206,6 +209,7 @@ export default function App() {
       activeTab={activeTab} 
       setActiveTab={setActiveTab}
       userAvatar={userAvatar}
+      userId={auth.currentUser?.uid || ''}
     >
       {renderContent()}
     </Layout>

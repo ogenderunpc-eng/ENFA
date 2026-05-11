@@ -72,6 +72,27 @@ export interface Student {
   password?: string;
 }
 
+export interface AppNotification {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  type: 'message' | 'exam' | 'performance' | 'system';
+  isRead: boolean;
+  createdAt: string;
+  link?: string;
+}
+
+export interface Homework {
+  id: string;
+  title: string;
+  description: string;
+  deadline: string;
+  teacherId: string;
+  classId: string;
+  createdAt: string;
+}
+
 export interface TeacherComment {
   id: string;
   teacherName: string;

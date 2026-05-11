@@ -231,21 +231,21 @@ export default function TeacherDashboard({ classes, messages, students, setClass
             <div className="flex flex-wrap gap-3">
               <button 
                 onClick={() => setIsManagingAttendance(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-error/10 text-error rounded-xl shadow-sm hover:bg-error/20 transition-all active:scale-95"
+                className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
               >
                 <Clock size={20} />
                 <span className="font-semibold">Yoklama Yönetimi</span>
               </button>
               <button 
                 onClick={() => setSelectedClass(classes.find(c => c.status === 'ongoing') || classes.find(c => c.status === 'next') || classes[0])}
-              className="flex items-center gap-2 px-6 py-3 bg-secondary text-white rounded-xl shadow-lg shadow-secondary/20 hover:scale-[1.02] transition-transform active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
             >
               <FileText size={20} />
               <span className="font-semibold">Ders Planını Aç</span>
             </button>
             <button 
               onClick={() => onNavigate?.('portal')}
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
             >
               <Edit3 size={20} />
               <span className="font-semibold">Not Girişi Yap</span>
@@ -255,7 +255,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                 setIsViewingReport(true);
                 generateAIReport();
               }}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-secondary border border-secondary rounded-xl shadow-sm hover:bg-secondary/5 transition-all active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 bg-black text-secondary border border-secondary rounded-xl shadow-sm hover:bg-secondary hover:text-black transition-all active:scale-95"
             >
               <Sparkles size={20} className="text-secondary" />
               <span className="font-semibold">Hızlı Rapor Oluştur</span>
@@ -266,24 +266,24 @@ export default function TeacherDashboard({ classes, messages, students, setClass
 
         {/* Muallim Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+          <div className="info-card text-center">
             <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Öğrenci</p>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-secondary">66</span>
+              <span className="text-4xl font-black text-accent">66</span>
               <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">+2</span>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+          <div className="info-card text-center">
             <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Genel Başarı Oranı</p>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-secondary">%84.5</span>
+              <span className="text-4xl font-black text-accent">%84.5</span>
               <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">1.4</span>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 text-center">
+          <div className="info-card text-center">
             <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yoklama Durumu</p>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-secondary">%98</span>
+              <span className="text-4xl font-black text-accent">%98</span>
               <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Tamam</span>
             </div>
           </div>
@@ -291,44 +291,44 @@ export default function TeacherDashboard({ classes, messages, students, setClass
 
         {/* Sınıf Özeti & Hızlı Not Girişi */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10">
+          <div className="info-card">
             <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
-              <BarChart3 className="text-secondary" size={24} />
+              <BarChart3 className="text-accent" size={24} />
               Ders Bazlı Puan Dağılımı (9-A)
             </h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-on-surface-variant">Matematik</span>
                 <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[80%]"></div>
+                  <div className="h-full bg-accent w-[80%]"></div>
                 </div>
                 <span className="text-xs font-bold text-primary">%80</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-on-surface-variant">Fizik</span>
                 <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[60%]"></div>
+                  <div className="h-full bg-accent w-[60%]"></div>
                 </div>
                 <span className="text-xs font-bold text-primary">%60</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-on-surface-variant">Türkçe</span>
                 <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[95%]"></div>
+                  <div className="h-full bg-accent w-[95%]"></div>
                 </div>
                 <span className="text-xs font-bold text-primary">%95</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-on-surface-variant">Kimya</span>
                 <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[70%]"></div>
+                  <div className="h-full bg-accent w-[70%]"></div>
                 </div>
                 <span className="text-xs font-bold text-primary">%70</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10">
+          <div className="info-card">
             <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
               <Plus className="text-secondary" size={24} />
               Hızlı Not Girişi
@@ -445,7 +445,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                     initial={{ height: 0 }}
                     animate={{ height: `${height}%` }}
                     transition={{ duration: 1, delay: 0.2 + i * 0.1 }}
-                    className="absolute bottom-0 w-full bg-secondary-container rounded-t-lg transition-colors group-hover:bg-secondary"
+                    className="absolute bottom-0 w-full bg-accent/20 rounded-t-lg transition-colors group-hover:bg-accent"
                   />
                 </div>
                 <span className="text-xs font-medium text-outline">
@@ -578,9 +578,9 @@ export default function TeacherDashboard({ classes, messages, students, setClass
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <motion.div 
             whileHover={{ y: -5 }}
-            className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col gap-4"
+            className="info-card flex flex-col gap-4"
           >
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+            <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
               <FileText size={24} />
             </div>
             <div>
@@ -589,7 +589,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
             </div>
             <button 
               onClick={() => setSelectedClass(classes[0])}
-              className="mt-auto bg-white/50 px-4 py-2 rounded-lg text-primary text-xs font-bold hover:bg-primary hover:text-white transition-all self-start"
+              className="mt-auto bg-accent/10 px-4 py-2 rounded-lg text-accent text-xs font-bold hover:bg-accent hover:text-white transition-all self-start"
             >
               Görüntüle
             </button>
@@ -597,7 +597,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
 
           <motion.div 
             whileHover={{ y: -5 }}
-            className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col gap-4"
+            className="info-card flex flex-col gap-4"
           >
             <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
               <Clock size={24} />
@@ -611,7 +611,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                 setShowNotification(true);
                 setTimeout(() => setShowNotification(false), 3000);
               }}
-              className="mt-auto bg-white/50 px-4 py-2 rounded-lg text-secondary text-xs font-bold hover:bg-secondary hover:text-white transition-all self-start"
+              className="mt-auto bg-accent/10 px-4 py-2 rounded-lg text-accent text-xs font-bold hover:bg-accent hover:text-white transition-all self-start"
             >
               Takvime Ekle
             </button>
@@ -619,7 +619,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
 
           <motion.div 
             whileHover={{ y: -5 }}
-            className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col gap-4"
+            className="info-card flex flex-col gap-4"
           >
             <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center text-orange-500">
               <Edit3 size={24} />
@@ -638,7 +638,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
 
           <motion.div 
             whileHover={{ y: -5 }}
-            className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col gap-4"
+            className="info-card flex flex-col gap-4"
           >
             <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center text-green-500">
               <CheckCircle2 size={24} />

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Message, Role, Student } from '../types';
 import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { notificationService } from '../services/notificationService';
 
 interface MessagesPageProps {
   messages: Message[];
@@ -84,6 +85,16 @@ export default function MessagesPage({ messages, setMessages, role, userName, us
 
     try {
       await addDoc(collection(db, 'messages'), newMessageBody);
+      
+      // Create notification for recipient
+      await notificationService.createNotification({
+        userId: newMessageBody.recipientId,
+        title: "Yeni Mesaj 📩",
+        content: `${newMessageBody.sender}: ${newMessageBody.content.substring(0, 50)}${newMessageBody.content.length > 50 ? '...' : ''}`,
+        type: 'message',
+        link: 'messages'
+      });
+
       if (isAddingNew) {
         setIsAddingNew(false);
         setTargetStudent(null);

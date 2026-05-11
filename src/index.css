@@ -9,9 +9,10 @@
   --color-primary-container: #1a1a1a;
   --color-secondary: #E1AD01;
   --color-secondary-container: #fff4cc;
-  --color-surface: #FDFDFD;
+  --color-accent: #0E8388;
+  --color-surface: #F8F9FA;
   --color-surface-container: #f1f3f5;
-  --color-surface-container-low: #FDFDFD;
+  --color-surface-container-low: #F8F9FA;
   --color-surface-container-lowest: #ffffff;
   --color-on-surface: #1a1c1e;
   --color-on-surface-variant: #44474e;
@@ -43,4 +44,8 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-outline/20 rounded-full;
+}
+
+.info-card {
+  @apply bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 border-l-[5px] border-l-accent;
 }

@@ -84,9 +84,42 @@
         "classId": { "type": "string" }
       },
       "required": ["studentId", "date", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Alerts for new messages, exams, or performance changes.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["message", "exam", "performance", "system"] },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "link": { "type": "string" }
+      },
+      "required": ["userId", "title", "content", "type", "createdAt"]
+    },
+    "Homework": {
+      "title": "Homework",
+      "description": "Assignments given by teachers to students/classes.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "deadline": { "type": "string", "format": "date" },
+        "teacherId": { "type": "string" },
+        "classId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "deadline", "teacherId", "classId", "createdAt"]
     }
   },
   "firestore": {
+    "/homework/{homeworkId}": {
+      "schema": "Homework",
+      "description": "Homework assignments."
+    },
     "/students/{studentId}": {
       "schema": "Student",
       "description": "Collection of students."
@@ -102,6 +135,10 @@
     "/attendance/{attendanceId}": {
       "schema": "Attendance",
       "description": "Daily attendance records."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User specific notifications."
     },
     "/yoneticiler/{adminId}": {
       "schema": "Message",

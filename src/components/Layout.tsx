@@ -1,7 +1,8 @@
 import React from 'react';
-import { Calendar, Users, MessageSquare, User, Home, BarChart3, Settings, LogOut, CheckSquare, ListTodo, LayoutDashboard, BookOpen } from 'lucide-react';
+import { Calendar, Users, MessageSquare, User, Home, BarChart3, Settings, LogOut, CheckSquare, ListTodo, LayoutDashboard, BookOpen, Bell, ClipboardList } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Role } from '../types';
+import NotificationCenter from './NotificationCenter';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,20 +12,23 @@ interface LayoutProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   userAvatar: string;
+  userId: string;
 }
 
-export default function Layout({ children, role, onLogout, activeTab, setActiveTab, userAvatar }: LayoutProps) {
+export default function Layout({ children, role, onLogout, activeTab, setActiveTab, userAvatar, userId }: LayoutProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
   const teacherNavItems = [
     { id: 'home', label: 'Sınıf Özeti', icon: LayoutDashboard },
     { id: 'portal', label: 'Yoklama Al', icon: ListTodo },
+    { id: 'homework', label: 'Ödev Takibi', icon: ClipboardList },
     { id: 'kts', label: 'Not Girişi', icon: BarChart3 },
     { id: 'profile', label: 'Ayarlar', icon: Settings },
   ];
 
   const studentNavItems = [
     { id: 'home', label: 'Ana Sayfa', icon: Home },
+    { id: 'homework', label: 'Ödev Takibi', icon: ClipboardList },
     { id: 'kts', label: 'Notlarım', icon: BookOpen },
     { id: 'schedule', label: 'İstatistikler', icon: BarChart3 },
     { id: 'profile', label: 'Ayarlar', icon: Settings },
@@ -35,7 +39,7 @@ export default function Layout({ children, role, onLogout, activeTab, setActiveT
   return (
     <div className="min-h-screen bg-surface flex flex-col lg:flex-row">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col w-64 fixed inset-y-0 left-0 bg-black text-white z-[60] border-r border-white/5">
+      <aside className="hidden lg:flex lg:flex-col w-64 fixed inset-y-0 left-0 bg-black text-white z-[60] border-r border-[#222]">
         <div className="p-8 flex flex-col h-full">
           {/* Logo / Branding Area */}
           <div className="flex flex-col mb-8 p-2">
@@ -43,6 +47,10 @@ export default function Layout({ children, role, onLogout, activeTab, setActiveT
               OGE ENDERUN
             </h1>
             <p className="text-[11px] font-bold text-[#777777] tracking-wider uppercase mt-2">BAŞARI ATLASI</p>
+          </div>
+
+          <div className="mb-6">
+            <NotificationCenter userId={userId} />
           </div>
 
           <div className="h-px bg-white/5 mb-8" />
@@ -111,13 +119,16 @@ export default function Layout({ children, role, onLogout, activeTab, setActiveT
               <h1 className="text-xl font-black tracking-[1px] leading-none text-secondary uppercase">OGE ENDERUN</h1>
               <p className="text-[10px] font-bold text-[#777777] tracking-widest uppercase mt-0.5">BAŞARI ATLASI</p>
             </div>
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-secondary/20">
-              <img 
-                className="w-full h-full object-cover" 
-                src={userAvatar || `https://ui-avatars.com/api/?name=User`} 
-                alt="User Profile"
-                referrerPolicy="no-referrer"
-              />
+            <div className="flex items-center gap-2">
+              <NotificationCenter userId={userId} />
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-secondary/20">
+                <img 
+                  className="w-full h-full object-cover" 
+                  src={userAvatar || `https://ui-avatars.com/api/?name=User`} 
+                  alt="User Profile"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
             </div>
           </div>
         </header>
