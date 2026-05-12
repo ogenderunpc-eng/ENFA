@@ -17,17 +17,26 @@ import KTSPage from './pages/KTSPage';
 import HomeworkPage from './pages/HomeworkPage';
 import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, where, or } from 'firebase/firestore';
 import { seedDatabase } from './lib/seed';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState<Role>('teacher');
+  const [role, setRole] = useState<Role | null>(null);
   const [activeTab, setActiveTab] = useState('home');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+      if (savedTheme) return savedTheme;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
   
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -36,9 +45,22 @@ export default function App() {
   const [isDeviceLinked, setIsDeviceLinked] = useState(false);
 
   useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setIsLoggedIn(true);
         setUserEmail(user.email || '');
         
         // Seed database on first run for developer
@@ -72,17 +94,19 @@ export default function App() {
           const studentDoc = await getDoc(doc(db, 'students', user.uid));
           if (studentDoc.exists()) {
             const data = studentDoc.data() as Student;
-            setRole('parent');
+            setRole('parent'); // Using parent role for both students and parents in UI
             setUserName(data.name || user.displayName || 'Veli');
             setUserAvatar(data.avatar || user.photoURL || `https://ui-avatars.com/api/?name=${data.name || 'Veli'}`);
           } else {
-            // Default to teacher if not found (for seeding purposes)
+            // Default to teacher if not found and not an admin (unlikely but safe)
             setRole('teacher');
-            setUserName(user.displayName || 'Öğretmen');
+            setUserName(user.displayName || 'Kullanıcı');
           }
         }
+        setIsLoggedIn(true);
       } else {
         setIsLoggedIn(false);
+        setRole(null);
       }
     });
 
@@ -90,9 +114,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !auth.currentUser || !role) return;
 
-    const unsubStudents = onSnapshot(collection(db, 'students'), (snapshot) => {
+    const uid = auth.currentUser.uid;
+    const email = auth.currentUser.email;
+
+    // Students/Parents should only list themselves or a teacher can list all
+    const studentsQuery = role === 'teacher' 
+      ? collection(db, 'students') 
+      : query(collection(db, 'students'), where('parentEmail', '==', email));
+
+    const unsubStudents = onSnapshot(studentsQuery, (snapshot) => {
       setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
     });
 
@@ -100,22 +132,35 @@ export default function App() {
       setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClassSession)));
     });
 
-    const unsubMessages = onSnapshot(
-      query(
-        collection(db, 'messages'), 
-        orderBy('createdAt', 'desc')
-      ), 
-      (snapshot) => {
-        const all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-        const filtered = all.filter(msg => 
-          msg.recipientId === auth.currentUser?.uid || 
-          msg.senderId === auth.currentUser?.uid ||
-          role === 'teacher'
+    // Messages query needs to be filtered for non-teachers to see their own conversations
+    const messagesQuery = role === 'teacher'
+      ? query(collection(db, 'messages'), orderBy('createdAt', 'desc'))
+      : query(
+          collection(db, 'messages'), 
+          or(
+            where('recipientId', '==', uid),
+            where('senderId', '==', uid)
+          ),
+          orderBy('createdAt', 'desc')
         );
-        setMessages(filtered);
+
+    const unsubMessages = onSnapshot(
+      messagesQuery, 
+      (snapshot) => {
+        setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'messages');
+      }
+    );
+    
+    const unsubAnnouncements = onSnapshot(
+      query(collection(db, 'announcements'), orderBy('date', 'desc')),
+      (snapshot) => {
+        setAnnouncements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'announcements');
       }
     );
 
@@ -123,8 +168,9 @@ export default function App() {
       unsubStudents();
       unsubClasses();
       unsubMessages();
+      unsubAnnouncements();
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, role]);
 
   const handleUpdateProfile = (data: { avatar?: string; name?: string; email?: string; phone?: string }) => {
     if (data.avatar !== undefined) setUserAvatar(data.avatar);
@@ -160,8 +206,8 @@ export default function App() {
     switch (activeTab) {
       case 'home':
         return role === 'teacher' 
-          ? <TeacherDashboard messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} activeTab={activeTab} /> 
-          : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} activeTab={activeTab} />;
+          ? <TeacherDashboard announcements={announcements} messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} activeTab={activeTab} /> 
+          : <ParentDashboard announcements={announcements} messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} activeTab={activeTab} />;
       case 'portal':
         return role === 'teacher' ? <PortalPage students={students} setStudents={setStudents} classes={classes} /> : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} students={students} activeTab={activeTab} />;
       case 'kts':
@@ -203,6 +249,8 @@ export default function App() {
       setActiveTab={setActiveTab}
       userAvatar={userAvatar}
       userId={auth.currentUser?.uid || ''}
+      theme={theme}
+      onToggleTheme={toggleTheme}
     >
       {renderContent()}
     </Layout>

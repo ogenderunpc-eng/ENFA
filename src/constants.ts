@@ -25,6 +25,7 @@ export const STUDENTS: Student[] = [
     avatar: 'https://i.pravatar.cc/150?u=mert',
     password: 'password123',
     parentName: 'Mehmet Demir',
+    parentEmail: 'ogrenci@example.com', // Matching student email for demo purposes
     ktsResults: [
       { id: 'kts-1', examName: 'KTS Deneme #1', date: '15 Mart 2024', correct: 85, wrong: 10, empty: 5, score: 450.5, rankClass: 1, rankSchool: 2, rankGeneral: 120 },
     ]
@@ -34,9 +35,11 @@ export const STUDENTS: Student[] = [
     name: 'Ali Demir', 
     number: '1024', 
     role: 'student',
+    email: 'ali@example.com',
     avatar: 'https://i.pravatar.cc/150?u=ali', 
     class: '12-A', 
     parentName: 'Mehmet Demir',
+    parentEmail: 'ogrenci@example.com', // Shared parent for test
     ktsResults: [
       { id: 'kts-1', examName: 'KTS Deneme #1', date: '15 Mart 2024', correct: 75, wrong: 15, empty: 10, score: 385.5, rankClass: 3, rankSchool: 12, rankGeneral: 450 },
       { id: 'kts-2', examName: 'KTS Deneme #2', date: '1 Nisan 2024', correct: 82, wrong: 10, empty: 8, score: 412.2, rankClass: 1, rankSchool: 5, rankGeneral: 210 },
@@ -69,6 +72,8 @@ export const RECENT_MESSAGES: Message[] = [
     senderRole: 'Öğretmen',
     content: 'Üçgenler bugün kare olmaya karar verdi, lütfen cetvellerinizi yanınızda getirmeyin, bisküvi getirin.',
     time: '14:20',
+    recipientId: 'student_test',
+    senderId: 'teacher_1'
   },
   {
     id: '2',
@@ -76,6 +81,8 @@ export const RECENT_MESSAGES: Message[] = [
     senderRole: 'Öğretmen',
     content: "Yerçekimi bugün %20 indirimde, zıplarken dikkatli olun tavanda kalabilirsiniz.",
     time: '11:05',
+    recipientId: 'student_test',
+    senderId: 'teacher_2'
   },
   {
     id: '3',
@@ -83,6 +90,8 @@ export const RECENT_MESSAGES: Message[] = [
     senderRole: 'Öğretmen',
     content: 'Deney tüplerine yanlışlıkla meyve suyu koydum, laboratuvar artık çok lezzetli kokuyor.',
     time: 'Dün',
+    recipientId: 'student_test',
+    senderId: 'teacher_1'
   },
 ];
 
@@ -158,7 +167,9 @@ export const MESSAGES: Message[] = [
     senderRole: 'Öğretmen',
     content: 'Hücrelerin bugün tatili var, mitokondriler enerji üretmeyi bıraktı pikniğe gitti.',
     time: '2 gün önce',
-    avatar: 'https://i.pravatar.cc/150?u=bilge'
+    avatar: 'https://i.pravatar.cc/150?u=bilge',
+    recipientId: 'student_test',
+    senderId: 'teacher_1'
   },
   {
     id: '5',
@@ -166,7 +177,9 @@ export const MESSAGES: Message[] = [
     senderRole: 'Öğretmen',
     content: 'Şair bugün çok dertli, mısralar birbirine küstü, kafiyeler firar etti.',
     time: '3 gün önce',
-    avatar: 'https://i.pravatar.cc/150?u=erdem'
+    avatar: 'https://i.pravatar.cc/150?u=erdem',
+    recipientId: 'student_test',
+    senderId: 'teacher_2'
   }
 ];
 

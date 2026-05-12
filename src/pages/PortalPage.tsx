@@ -300,19 +300,19 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
                       <div className="flex items-center justify-center gap-2">
                         <button 
                           onClick={() => handleAttendance(s.id, 'present')}
-                          className={`p-2 rounded-lg transition-all ${s.status === 'present' ? 'bg-secondary text-white shadow-md' : 'bg-white text-outline hover:text-secondary'}`}
+                          className={`p-2 rounded-lg transition-all ${s.status === 'present' ? 'bg-secondary text-white shadow-md' : 'bg-surface-container text-outline hover:text-secondary'}`}
                         >
                           <CheckCircle2 size={18} />
                         </button>
                         <button 
                           onClick={() => handleAttendance(s.id, 'absent')}
-                          className={`p-2 rounded-lg transition-all ${s.status === 'absent' ? 'bg-error text-white shadow-md' : 'bg-white text-outline hover:text-error'}`}
+                          className={`p-2 rounded-lg transition-all ${s.status === 'absent' ? 'bg-error text-white shadow-md' : 'bg-surface-container text-outline hover:text-error'}`}
                         >
                           <XCircle size={18} />
                         </button>
                         <button 
                           onClick={() => handleAttendance(s.id, 'late')}
-                          className={`p-2 rounded-lg transition-all ${s.status === 'late' ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-outline hover:text-orange-500'}`}
+                          className={`p-2 rounded-lg transition-all ${s.status === 'late' ? 'bg-orange-500 text-white shadow-md' : 'bg-surface-container text-outline hover:text-orange-500'}`}
                         >
                           <Clock size={18} />
                         </button>
@@ -508,7 +508,7 @@ export default function PortalPage({ students, setStudents, classes }: PortalPag
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-2xl bg-surface-container-lowest rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-start mb-8">
                 <div className="flex items-center gap-6">

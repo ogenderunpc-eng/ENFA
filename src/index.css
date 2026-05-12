@@ -18,11 +18,33 @@
   --color-on-surface-variant: #44474e;
   --color-outline: #74777f;
   --color-outline-variant: #c4c6cf;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+}
+
+.dark {
+  --color-primary: #ffffff;
+  --color-primary-container: #1e1e1e;
+  --color-secondary: #E1AD01;
+  --color-secondary-container: #4d3b00;
+  --color-accent: #0E8388;
+  --color-surface: #0E1117;
+  --color-surface-container: #1A1C23;
+  --color-surface-container-low: #15181e;
+  --color-surface-container-lowest: #0E1117;
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #888888;
+  --color-outline: #2D2E33;
+  --color-outline-variant: #2D2E33;
+}
+
+@theme {
+  --shadow-glow: 0 0 15px rgba(14, 131, 136, 0.3);
 }
 
 @layer base {
   body {
-    @apply bg-surface text-on-surface font-sans;
+    @apply bg-surface text-on-surface font-sans transition-colors duration-300;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -31,7 +53,7 @@
 }
 
 .bg-login-gradient {
-  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  background: linear-gradient(135deg, var(--color-primary-container) 0%, var(--color-surface-container) 100%);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -47,5 +69,5 @@
 }
 
 .info-card {
-  @apply bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 border-l-[5px] border-l-accent;
+  @apply bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/10 border-l-[5px] border-l-accent transition-all duration-300;
 }

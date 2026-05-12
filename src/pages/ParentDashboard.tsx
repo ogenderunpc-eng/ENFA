@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight, BookOpen, BarChart3, CheckCircle2, UserPlus, FileText, Activity } from 'lucide-react';
+import { Bell, Star, TrendingUp, MessageSquare, Calendar, ArrowRight, BookOpen, BarChart3, CheckCircle2, UserPlus, FileText, Activity, Megaphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GRADE_UPDATES, TEACHER_COMMENTS } from '../constants';
-import { Student, ClassSession, Message, Homework } from '../types';
+import { Student, ClassSession, Message, Homework, Announcement } from '../types';
 import { notificationService } from '../services/notificationService';
 import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 
 interface ParentDashboardProps {
+  announcements?: Announcement[];
   classes?: ClassSession[];
   messages: Message[];
   userName: string;
@@ -16,7 +17,7 @@ interface ParentDashboardProps {
   activeTab?: string;
 }
 
-export default function ParentDashboard({ onNavigate, messages, userName, classes = [], students = [], activeTab = 'home' }: ParentDashboardProps) {
+export default function ParentDashboard({ onNavigate, announcements = [], messages, userName, classes = [], students = [], activeTab = 'home' }: ParentDashboardProps) {
   const [showNotification, setShowNotification] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [homeworkList, setHomeworkList] = useState<Homework[]>([]);
@@ -105,7 +106,7 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
         <div className="info-card text-center">
           <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Akademik Notun</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-accent">{avgGrade}</span>
+            <span className="text-4xl font-black text-secondary">{avgGrade}</span>
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${avgGrade >= 85 ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50'}`}>
               {avgGrade >= 85 ? 'Pekiyi' : 'İyi'}
             </span>
@@ -114,14 +115,14 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
         <div className="info-card text-center">
           <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Devamsızlık</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-accent">2</span>
+            <span className="text-4xl font-black text-secondary">2</span>
             <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Gün</span>
           </div>
         </div>
         <div className="info-card text-center">
           <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Bugünkü Yoklama</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-4xl font-black text-accent">{child?.status === 'present' ? 'Geldi' : child?.status === 'absent' ? 'Gelmedi' : 'Bekliyor'}</span>
+            <span className="text-4xl font-black text-secondary">{child?.status === 'present' ? 'Geldi' : child?.status === 'absent' ? 'Gelmedi' : 'Bekliyor'}</span>
             <span className={`w-3 h-3 rounded-full animate-pulse ${child?.status === 'present' ? 'bg-green-500' : 'bg-red-500'}`}></span>
           </div>
         </div>
@@ -132,7 +133,7 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-outline-variant/10"
+          className="lg:col-span-2 bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-outline-variant/10"
         >
           <h3 className="text-xl font-bold text-primary mb-8">Haftalık Başarı Grafiği</h3>
           <div className="h-64 flex items-end justify-between gap-2 px-4">
@@ -162,7 +163,7 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-1 bg-white p-8 rounded-2xl shadow-sm border border-outline-variant/10"
+          className="lg:col-span-1 bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-outline-variant/10"
         >
           <h3 className="text-xl font-bold text-primary mb-8">Puan Dağılımı</h3>
           <div className="space-y-6">
@@ -188,6 +189,35 @@ export default function ParentDashboard({ onNavigate, messages, userName, classe
           </div>
         </motion.div>
       </div>
+
+      {/* Announcements Section */}
+      {announcements.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <Megaphone className="text-secondary" size={24} />
+            <h3 className="text-2xl font-bold text-primary">Güncel Duyurular</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {announcements.map((ann) => (
+              <motion.div 
+                key={ann.id}
+                whileHover={{ y: -2 }}
+                className="bg-surface-container-low p-5 rounded-2xl border-l-4 border-l-secondary border-t border-r border-b border-outline-variant/10 shadow-sm"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-bold text-primary">{ann.title}</h4>
+                  <span className="text-[10px] font-black text-outline uppercase tracking-widest">{ann.date}</span>
+                </div>
+                <p className="text-sm text-on-surface-variant font-medium leading-relaxed">{ann.content}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      )}
 
       {/* Recent Activities */}
       <motion.section

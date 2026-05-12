@@ -201,7 +201,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
               className="space-y-8"
             >
               {/* Student Overview Header */}
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/5 flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="bg-surface-container-lowest rounded-3xl p-8 shadow-sm border border-outline-variant/5 flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div className="flex items-center gap-6">
                   <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-surface shadow-xl">
                     <img src={selectedStudent.avatar || `https://i.pravatar.cc/150?u=${selectedStudent.name}`} alt={selectedStudent.name} className="w-full h-full object-cover" />
@@ -242,7 +242,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
               {/* Charts & Table */}
               <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
                 {/* Chart */}
-                <div className="xl:col-span-3 bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/5">
+                <div className="xl:col-span-3 bg-surface-container-lowest rounded-3xl p-8 shadow-sm border border-outline-variant/5">
                   <div className="flex items-center justify-between mb-8">
                     <h4 className="text-lg font-black text-primary flex items-center gap-2">
                        <TrendingUp className="text-secondary" size={20} />
@@ -321,7 +321,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                       <h5 className="text-[10px] font-black text-secondary uppercase tracking-widest mb-1">Tahmini LGS Yüzdesi</h5>
                       <p className="text-2xl font-black text-primary">%2.4 - %3.8</p>
                     </div>
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-secondary shadow-sm">
+                    <div className="w-12 h-12 bg-surface-container rounded-2xl flex items-center justify-center text-secondary shadow-sm">
                       <BarChart3 size={24} />
                     </div>
                   </div>
@@ -408,7 +408,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                className="space-y-8"
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/5">
+                <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant/5">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-10 h-10 bg-primary/5 text-primary rounded-xl flex items-center justify-center">
                       <Users size={20} />
@@ -418,7 +418,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                   <p className="text-3xl font-black text-primary">{students.length} Talebe</p>
                   <p className="text-[10px] text-on-surface-variant font-bold mt-1 tracking-widest">AKTİF KAYITLI</p>
                 </div>
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/5">
+                <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant/5">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-10 h-10 bg-secondary/5 text-secondary rounded-xl flex items-center justify-center">
                       <BarChart3 size={20} />
@@ -428,7 +428,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                   <p className="text-3xl font-black text-primary">378.4</p>
                   <p className="text-[10px] text-green-500 font-bold mt-1 tracking-widest">↑ %4.2 GELİŞİM</p>
                 </div>
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/5">
+                <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant/5">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center">
                       <Award size={20} />
@@ -441,7 +441,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
               </div>
 
               {/* Class Performance Chart */}
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/5">
+              <div className="bg-surface-container-lowest rounded-3xl p-8 shadow-sm border border-outline-variant/5">
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h4 className="text-lg font-black text-primary flex items-center gap-2">
@@ -584,7 +584,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-3xl bg-white rounded-[40px] shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-3xl bg-surface-container-lowest rounded-[40px] shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8 pb-6 border-b border-outline-variant/10">
                 <div className="flex items-center gap-4">
@@ -616,7 +616,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-3xl p-6 border border-outline-variant/10 space-y-4">
+                  <div className="bg-surface-container rounded-3xl p-6 border border-outline-variant/10 space-y-4">
                      <h5 className="text-xs font-black text-primary uppercase tracking-widest mb-2">Başarı Karşılaştırması</h5>
                      <div className="space-y-4">
                         <div className="space-y-1">
@@ -642,7 +642,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
                 </div>
 
                 <div className="space-y-6">
-                   <div className="bg-white rounded-3xl p-6 border border-outline-variant/10">
+                   <div className="bg-surface-container rounded-3xl p-6 border border-outline-variant/10">
                       <h5 className="text-xs font-black text-primary uppercase tracking-widest mb-6">Konu Analizi</h5>
                       <div className="space-y-4">
                          {[
@@ -704,7 +704,7 @@ export default function KTSPage({ students, setStudents, role }: KTSPageProps) {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-2xl bg-surface-container-lowest rounded-[40px] shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8 pb-6 border-b border-outline-variant/10">
                 <div className="flex items-center gap-4">

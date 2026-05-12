@@ -13,6 +13,20 @@ export async function seedDatabase() {
           password: student.password || 'oge1212' // Default password for seeding
         });
       }
+    } else {
+      // Patch existing students with parentEmail if missing
+      for (const docSnap of studentsSnap.docs) {
+        const data = docSnap.data();
+        if (!data.parentEmail) {
+          const match = STUDENTS.find(m => m.id === docSnap.id);
+          if (match && match.parentEmail) {
+            await setDoc(doc(db, 'students', docSnap.id), {
+              ...data,
+              parentEmail: match.parentEmail
+            }, { merge: true });
+          }
+        }
+      }
     }
 
     const classesSnap = await getDocs(collection(db, 'classes'));
@@ -31,6 +45,21 @@ export async function seedDatabase() {
           ...msg,
           createdAt: new Date().toISOString()
         });
+      }
+    } else {
+      // Update existing messages with IDs and fields if missing (patch for existing data)
+      for (const docSnap of messagesSnap.docs) {
+        const data = docSnap.data();
+        if (!data.recipientId) {
+          const match = MESSAGES.find(m => m.id === docSnap.id);
+          if (match) {
+            await setDoc(doc(db, 'messages', docSnap.id), {
+              ...data,
+              recipientId: match.recipientId,
+              senderId: match.senderId
+            }, { merge: true });
+          }
+        }
       }
     }
 

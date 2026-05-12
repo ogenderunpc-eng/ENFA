@@ -227,7 +227,7 @@ export default function HomeworkPage({ role, students = [] }: HomeworkPageProps)
               </p>
               <div className="flex -space-x-2">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-surface-container flex items-center justify-center text-[10px] font-bold text-black">
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface">
                     {i}
                   </div>
                 ))}
@@ -256,7 +256,7 @@ export default function HomeworkPage({ role, students = [] }: HomeworkPageProps)
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-8">
                 <h2 className="text-3xl font-black text-primary mb-2">Yeni Ödev Atama</h2>

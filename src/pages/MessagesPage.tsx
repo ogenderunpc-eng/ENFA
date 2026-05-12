@@ -198,7 +198,7 @@ export default function MessagesPage({ messages, setMessages, role, userName, us
             className="flex flex-col h-full bg-surface-container-lowest rounded-3xl shadow-xl overflow-hidden border border-outline-variant/10"
           >
             {/* Chat Header */}
-            <header className="p-4 bg-white border-b border-outline-variant/10 flex items-center gap-4">
+            <header className="p-4 bg-surface-container-lowest border-b border-outline-variant/10 flex items-center gap-4">
               <button 
                 onClick={() => setSelectedChat(null)}
                 className="p-2 hover:bg-surface-container rounded-full transition-colors border-none bg-transparent outline-none"
@@ -231,7 +231,7 @@ export default function MessagesPage({ messages, setMessages, role, userName, us
                   <div className={`p-4 rounded-2xl shadow-sm border border-outline-variant/10 ${
                     msg.senderId === myId 
                       ? 'bg-primary text-white rounded-tr-none' 
-                      : 'bg-white text-on-surface rounded-tl-none'
+                      : 'bg-surface-container-lowest text-on-surface rounded-tl-none'
                   }`}>
                     <p className="text-sm leading-relaxed">{msg.content}</p>
                   </div>
@@ -242,7 +242,7 @@ export default function MessagesPage({ messages, setMessages, role, userName, us
             </div>
 
             {/* Chat Footer */}
-            <footer className="p-4 bg-white border-t border-outline-variant/10">
+            <footer className="p-4 bg-surface-container-lowest border-t border-outline-variant/10">
               <div className="flex items-center gap-3 bg-surface-container-low rounded-2xl p-2 pr-4 border border-outline-variant/5">
                 <input 
                   type="text" 
@@ -278,13 +278,13 @@ export default function MessagesPage({ messages, setMessages, role, userName, us
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl"
+              className="bg-surface-container-lowest rounded-2xl w-full max-w-md overflow-hidden shadow-xl"
             >
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center text-gray-900 font-bold">
+              <div className="p-6 border-b border-outline-variant/10 flex justify-between items-center text-primary font-bold">
                 <h3 className="text-xl">
                   {role === 'teacher' ? 'Alıcı Seçin' : 'Öğretmene Mesaj'}
                 </h3>
-                <button onClick={() => { setIsAddingNew(false); setTargetStudent(null); }} className="text-gray-400 hover:text-gray-600 border-none bg-transparent">
+                <button onClick={() => { setIsAddingNew(false); setTargetStudent(null); }} className="text-outline hover:text-primary border-none bg-transparent">
                   <ArrowLeft className="w-6 h-6" />
                 </button>
               </div>
@@ -296,41 +296,41 @@ export default function MessagesPage({ messages, setMessages, role, userName, us
                       <button
                         key={student.id}
                         onClick={() => setTargetStudent(student)}
-                        className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100 bg-white"
+                        className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container transition-colors border border-outline-variant/10 bg-surface-container-lowest"
                       >
                         <img src={student.avatar || `https://i.pravatar.cc/150?u=${student.name}`} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
                         <div className="text-left">
-                          <p className="font-medium text-gray-900">{student.name}</p>
-                          <p className="text-sm text-gray-500">{student.class} - {student.parentName}</p>
+                          <p className="font-medium text-primary">{student.name}</p>
+                          <p className="text-sm text-on-surface-variant font-medium">{student.class} - {student.parentName}</p>
                         </div>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-4 text-gray-900">
-                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                  <div className="space-y-4 text-on-surface">
+                    <div className="flex items-center gap-4 p-4 bg-surface-container rounded-xl">
                       <img 
                         src={targetStudent?.avatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuDe2PJTYBt9RL9CuhjZsSLoXQiK3M9zDmFR4fyfO0G6UJgb_bJHazeXsJxYJc_zuOWpG5zOX2cBF34LsC1Qtw2xugvkmf2YEvCucosQ4VXwgsE_VS8lQOyGxVNVI8gIAfThpHh5X4d_b8YOXW7Df9W_Z0aR3M0Sf3Lv6bMWderfeg_ReOUxg8Cy8vrpfom5FXEbGCGO5Mmu8IBMcQLSxS1ht6Bq5nBZ0pJC8K1CDcEcBuH16tScV6YGnEwmoyp4EP2m95fDg_njSZV9"} 
                         alt="Recipient" 
                         className="w-12 h-12 rounded-full object-cover" 
                       />
                       <div>
-                        <p className="font-semibold">
+                        <p className="font-semibold text-primary">
                           {role === 'teacher' ? `${targetStudent?.name} Velisi` : 'Okul Yönetimi / Öğretmen'}
                         </p>
-                        <p className="text-sm text-gray-500">Yeni Mesaj</p>
+                        <p className="text-sm text-on-surface-variant font-medium">Yeni Mesaj</p>
                       </div>
                     </div>
                     <textarea
                       placeholder="Mesajınızı yazın..."
-                      className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-secondary h-32 resize-none text-gray-900"
+                      className="w-full p-4 bg-surface-container border-none rounded-xl focus:ring-2 focus:ring-secondary h-32 resize-none text-on-surface"
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                     />
                     <button
                       onClick={() => handleSendMessage()}
                       disabled={isSending}
-                      className="w-full py-4 bg-secondary text-white rounded-xl font-semibold hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2 border-none disabled:opacity-50"
+                      className="w-full py-4 bg-secondary text-primary rounded-xl font-semibold hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2 border-none disabled:opacity-50"
                     >
                       {isSending ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />}
                       {isSending ? 'Gönderiliyor...' : 'Gönder'}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Users, MessageSquare, User, Home, BarChart3, Settings, LogOut, CheckSquare, ListTodo, LayoutDashboard, BookOpen, Bell, ClipboardList } from 'lucide-react';
+import { Calendar, Users, MessageSquare, User, Home, BarChart3, Settings, LogOut, CheckSquare, ListTodo, LayoutDashboard, BookOpen, Bell, ClipboardList, Moon, Sun } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Role } from '../types';
 import NotificationCenter from './NotificationCenter';
@@ -13,9 +13,21 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
   userAvatar: string;
   userId: string;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
-export default function Layout({ children, role, onLogout, activeTab, setActiveTab, userAvatar, userId }: LayoutProps) {
+export default function Layout({ 
+  children, 
+  role, 
+  onLogout, 
+  activeTab, 
+  setActiveTab, 
+  userAvatar, 
+  userId,
+  theme = 'light',
+  onToggleTheme
+}: LayoutProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
   const teacherNavItems = [
@@ -49,8 +61,16 @@ export default function Layout({ children, role, onLogout, activeTab, setActiveT
             <p className="text-[11px] font-bold text-[#777777] tracking-wider uppercase mt-2">BAŞARI ATLASI</p>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <NotificationCenter userId={userId} />
+            {onToggleTheme && (
+              <button 
+                onClick={onToggleTheme}
+                className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"
+              >
+                {theme === 'dark' ? <Sun size={18} className="text-secondary" /> : <Moon size={18} className="text-white/60" />}
+              </button>
+            )}
           </div>
 
           <div className="h-px bg-white/5 mb-8" />
@@ -121,6 +141,14 @@ export default function Layout({ children, role, onLogout, activeTab, setActiveT
             </div>
             <div className="flex items-center gap-2">
               <NotificationCenter userId={userId} />
+              {onToggleTheme && (
+                <button 
+                  onClick={onToggleTheme}
+                  className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"
+                >
+                  {theme === 'dark' ? <Sun size={18} className="text-secondary" /> : <Moon size={18} className="text-white/60" />}
+                </button>
+              )}
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-secondary/20">
                 <img 
                   className="w-full h-full object-cover" 

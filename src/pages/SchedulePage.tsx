@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { BookOpen, MapPin, Clock, User, MoreVertical, Lock, CheckCircle, BarChart3, Bell, X, Calendar, FileText, Download, CheckCircle2 } from 'lucide-react';
+import { BookOpen, MapPin, Clock, User, MoreVertical, Lock, CheckCircle, BarChart3, Bell, X, Calendar, FileText, Download, CheckCircle2, Info, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CLASSES } from '../constants';
 import { ClassSession, Role } from '../types';
+import { useEffect, useState } from 'react';
 
 interface SchedulePageProps {
   role?: Role;
@@ -13,66 +13,52 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
   const [selectedDay, setSelectedDay] = useState('Pazartesi');
   const [selectedClass, setSelectedClass] = useState<ClassSession | null>(null);
   const [showNotification, setShowNotification] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false }));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false }));
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const scheduleData: Record<string, ClassSession[]> = {
-    'Pazartesi': CLASSES,
+    'Pazartesi': [
+      { id: 'd1', title: 'Matematik', time: '08:30 - 09:10', location: 'Derslik 1', classGroup: 'Enes Hoca', status: 'next' as const, image: '' },
+      { id: 'd2', title: 'Fizik', time: '09:20 - 10:00', location: 'Lab 1', classGroup: 'Ahmet Hoca', status: 'next' as const, image: '' },
+      { id: 'd3', title: 'Edebiyat', time: '10:10 - 10:50', location: 'Derslik 4', classGroup: 'Selin Hoca', status: 'next' as const, image: '' },
+      { id: 'd4', title: 'Yazılım (Python)', time: '11:00 - 11:40', location: 'Bilişim Lab', classGroup: 'AFD', status: 'next' as const, image: '' },
+      { id: 'd5', title: 'Tarih', time: '13:30 - 14:10', location: 'Derslik 2', classGroup: 'Mehmet Hoca', status: 'next' as const, image: '' },
+    ],
     'Salı': [
-      {
-        id: 's1',
-        title: 'Biyoloji: Hücre Bölünmesi',
-        time: '09:00 - 10:30',
-        location: 'Laboratuvar 1',
-        classGroup: '10-B Sınıfı',
-        image: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&q=80&w=800',
-        status: 'ongoing'
-      },
-      {
-        id: 's2',
-        title: 'Coğrafya: Yer Şekilleri',
-        time: '11:00 - 12:30',
-        location: 'Derslik 5',
-        classGroup: '9-A Sınıfı',
-        image: 'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?auto=format&fit=crop&q=80&w=800',
-      }
+      { id: 's1', title: 'Biyoloji', time: '09:00 - 10:30', location: 'Laboratuvar 1', classGroup: 'Zeynep Hoca', image: '' },
+      { id: 's2', title: 'Coğrafya', time: '11:00 - 12:30', location: 'Derslik 5', classGroup: 'Fatma Hoca', image: '' }
     ],
     'Çarşamba': [
-      {
-        id: 'c1',
-        title: 'İngilizce: Speaking',
-        time: '10:00 - 11:30',
-        location: 'Dil Lab',
-        classGroup: '11-C Sınıfı',
-        image: 'https://images.unsplash.com/photo-1543165796-5426273eaab3?auto=format&fit=crop&q=80&w=800',
-        status: 'ongoing'
-      }
+      { id: 'c1', title: 'İngilizce', time: '10:00 - 11:30', location: 'Dil Lab', classGroup: 'John Doe', image: '' }
     ],
     'Perşembe': [
-      {
-        id: 'p1',
-        title: 'Edebiyat: Divan Şiiri',
-        time: '09:00 - 10:30',
-        location: 'Derslik 12',
-        classGroup: '12-A Sınıfı',
-        image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=800',
-        status: 'ongoing'
-      }
+      { id: 'p1', title: 'Felsefe', time: '09:00 - 10:30', location: 'Derslik 12', classGroup: 'Can Hoca', image: '' }
     ],
     'Cuma': [
-      {
-        id: 'cu1',
-        title: 'Felsefe: Etik',
-        time: '14:00 - 15:30',
-        location: 'Kütüphane',
-        classGroup: '11-B Sınıfı',
-        image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80&w=800',
-        status: 'ongoing'
-      }
+      { id: 'cu1', title: 'Kimya', time: '14:00 - 15:30', location: 'Lab 2', classGroup: 'Merve Hoca', image: '' }
     ]
   };
 
+  const getLessonStatus = (timeRange: string) => {
+    const [start, end] = timeRange.split(' - ');
+    if (currentTime < start) return { text: '⚪ Bekliyor', active: false, done: false };
+    if (currentTime >= start && currentTime <= end) return { text: '🟢 ŞİMDİ', active: true, done: false };
+    return { text: '✅ Tamamlandı', active: false, done: true };
+  };
+
   const currentClasses = scheduleData[selectedDay] || [];
-  const ongoingClass = currentClasses.find(c => c.status === 'ongoing');
-  const otherClasses = currentClasses.filter(c => c.status !== 'ongoing');
+  
+  // Find next lesson
+  const nextLesson = currentClasses.find(c => {
+    const [start] = c.time.split(' - ');
+    return currentTime < start;
+  });
 
   return (
     <div className="space-y-12">
@@ -82,17 +68,17 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
           <div className="max-w-2xl">
             <span className="text-secondary font-semibold tracking-widest text-xs uppercase mb-2 block">AKADEMİK TAKVİM</span>
             <h2 className="text-4xl md:text-5xl font-extrabold font-headline text-primary tracking-tighter leading-tight">
-              Haftalık Ders <br/>Programı
+              Günün Akışı ve <br/>Ders Programı
             </h2>
           </div>
           
-          <div className="flex items-center gap-3 bg-surface-container-low p-1.5 rounded-full overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-3 bg-surface-container-low p-1.5 rounded-full overflow-x-auto no-scrollbar border border-outline-variant/10">
             {['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'].map((day) => (
               <button 
                 key={day}
                 onClick={() => setSelectedDay(day)}
                 className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
-                  selectedDay === day ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:bg-surface-variant/50'
+                  selectedDay === day ? 'bg-primary text-secondary shadow-lg' : 'text-on-surface-variant hover:bg-surface-variant/50'
                 }`}
               >
                 {day}
@@ -102,157 +88,143 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
         </div>
       </section>
 
-      {/* Schedule Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Featured Class */}
-        {ongoingClass ? (
-          <motion.div 
-            key={ongoingClass.id}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="md:col-span-8 group relative overflow-hidden bg-primary-container rounded-xl aspect-[16/9] md:aspect-auto md:h-[450px] flex flex-col justify-end p-8 text-white"
-          >
-            <div className="absolute inset-0 z-0">
-              <img 
-                className="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" 
-                src={ongoingClass.image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800'} 
-                alt={ongoingClass.title}
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/40 to-transparent"></div>
-            </div>
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-secondary text-white text-xs font-bold rounded-full uppercase tracking-widest">Şu An</span>
-                <span className="text-white/60 text-sm font-medium">{ongoingClass.time}</span>
-              </div>
-              <h3 className="text-3xl md:text-4xl font-bold font-headline mb-3">{ongoingClass.title}</h3>
-              <p className="text-white/70 max-w-md mb-8">{ongoingClass.classGroup} için {ongoingClass.location} salonunda devam ediyor.</p>
-              
-              <div className="flex flex-wrap gap-4">
-                <button className="flex items-center gap-2 px-6 py-3 bg-secondary-container text-on-secondary-container rounded-lg font-bold transition-all hover:opacity-90 active:scale-95">
-                  <BookOpen size={18} />
-                  Materyalleri Hazırla
-                </button>
-                <button 
-                  onClick={() => setSelectedClass(ongoingClass)}
-                  className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-lg font-bold transition-all hover:bg-white/20"
-                >
-                  Ders Detayı
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          <div className="md:col-span-8 flex items-center justify-center bg-surface-container-low rounded-xl border-2 border-dashed border-outline-variant/20 h-[450px]">
-            <p className="text-on-surface-variant font-medium">Bu saatte aktif ders bulunmuyor.</p>
-          </div>
-        )}
-
-        {/* Next Classes */}
-        <div className="md:col-span-4 flex flex-col gap-6">
-          {otherClasses.length > 0 ? (
-            otherClasses.map((c) => (
-              <motion.div 
-                key={c.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                onClick={() => setSelectedClass(c)}
-                className="bg-surface-container-lowest p-6 rounded-xl relative group cursor-pointer transition-all hover:shadow-[0_12px_40px_rgba(0,30,64,0.06)]"
-              >
-                <div className="absolute left-0 top-6 bottom-6 w-1 bg-secondary rounded-r-full"></div>
-                <div className="flex justify-between items-start mb-4">
-                  <span className="text-xs font-bold text-outline uppercase tracking-widest">{c.time}</span>
-                  <MoreVertical className="text-outline-variant" size={18} />
-                </div>
-                <h4 className="text-xl font-bold text-primary mb-1">{c.title}</h4>
-                <p className="text-sm text-on-surface-variant mb-4">{c.classGroup} • {c.location}</p>
-                
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
-                      <img src={`https://i.pravatar.cc/150?u=${i + 10}`} alt="Talebe" referrerPolicy="no-referrer" />
-                    </div>
-                  ))}
-                  <div className="w-8 h-8 rounded-full border-2 border-white bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface-variant">+24</div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-surface-container-low rounded-xl border-2 border-dashed border-outline-variant/20 p-8">
-              <p className="text-on-surface-variant text-sm font-medium text-center">Günün geri kalanında ders bulunmuyor.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Summary Section */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Daily Flow (Günün Akışı) */}
         <div className="lg:col-span-2">
-          <h3 className="text-2xl font-bold font-headline text-primary mb-6 flex items-center gap-3">
-            <BarChart3 className="text-secondary" size={24} />
-            Günün Özeti
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center gap-6 p-5 bg-surface-container-low rounded-xl">
-              <div className="w-12 h-12 flex-shrink-0 bg-primary/5 rounded-lg flex items-center justify-center">
-                <BookOpen className="text-primary" size={24} />
-              </div>
-              <div className="flex-grow">
-                <h5 className="font-bold text-primary">3 Yeni Okuma Materyali</h5>
-                <p className="text-sm text-on-surface-variant">Siyaset Bilimi dersi için ek kaynaklar paylaşıldı.</p>
-              </div>
-              <button 
-                onClick={() => setSelectedClass(classes[0])}
-                className="px-5 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
-              >
-                Görüntüle
-              </button>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-black text-primary flex items-center gap-3">
+              <Calendar className="text-secondary" size={24} />
+              Günün Akışı
+            </h3>
+            <div className="px-3 py-1 bg-surface-container rounded-lg border border-outline-variant/10 shadow-sm">
+              <span className="text-xs font-bold text-secondary font-mono">{currentTime}</span>
             </div>
-            <div className="flex items-center gap-6 p-5 bg-surface-container-low rounded-xl">
-              <div className="w-12 h-12 flex-shrink-0 bg-secondary/5 rounded-lg flex items-center justify-center">
-                <Bell className="text-secondary" size={24} />
+          </div>
+
+          <div className="space-y-3">
+            {currentClasses.length > 0 ? (
+              currentClasses.map((item) => {
+                const status = getLessonStatus(item.time);
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    onClick={() => setSelectedClass(item)}
+                    className={`flex justify-between items-center p-5 rounded-2xl border-l-[5px] transition-all cursor-pointer group shadow-sm ${
+                      status.active 
+                        ? 'bg-accent/10 border-l-accent shadow-[0_0_20px_rgba(14,131,136,0.2)]' 
+                        : status.done
+                        ? 'bg-surface-container-low border-l-outline/20 opacity-70'
+                        : 'bg-surface-container-lowest border-l-outline-variant/20 hover:border-l-secondary'
+                    }`}
+                  >
+                    <div className="flex items-center gap-6">
+                      <div className="w-1.5 h-1.5 rounded-full bg-outline-variant/30 group-hover:bg-secondary" />
+                      <div>
+                        <span className="text-secondary font-mono font-bold text-sm tracking-tighter">{item.time}</span>
+                        <h4 className="text-lg font-bold text-primary group-hover:text-secondary transition-colors">{item.title}</h4>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">{item.classGroup}</span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                        status.active ? 'bg-accent/20 text-accent' : 'bg-surface-container text-on-surface-variant'
+                      }`}>
+                        {status.text}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <div className="text-center py-20 bg-surface-container-lowest rounded-[2rem] border-2 border-dashed border-outline-variant/20">
+                <p className="text-on-surface-variant font-medium">Bugün programda ders bulunmuyor.</p>
               </div>
-              <div className="flex-grow">
-                <h5 className="font-bold text-primary">Sınav Hatırlatması</h5>
-                <p className="text-sm text-on-surface-variant">Lineer Cebir vizesi için son 4 gün.</p>
-              </div>
-              <button 
-                onClick={() => {
-                  setShowNotification(true);
-                  setTimeout(() => setShowNotification(false), 3000);
-                }}
-                className="px-5 py-2 bg-secondary text-white rounded-lg font-bold text-sm shadow-lg shadow-secondary/20 hover:opacity-90 transition-all"
-              >
-                Takvime Ekle
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="bg-surface-container-high p-8 rounded-xl flex flex-col items-center text-center">
-          <div className="w-20 h-20 bg-primary-container rounded-full flex items-center justify-center mb-6 shadow-xl">
-            <CheckCircle className="text-secondary-container" size={40} />
-          </div>
-          <div className="flex justify-between items-center mb-6 w-full">
-            <h4 className="text-xl font-bold text-primary">Haftalık İlerleme</h4>
-            <button className="px-3 py-1 bg-primary/10 text-primary rounded-lg font-bold text-[10px] uppercase hover:bg-primary hover:text-white transition-all">
-              Detaylı Analiz
+        {/* Sidebar Info */}
+        <div className="space-y-8">
+          {/* Announcements */}
+          <div className="bg-surface-container-lowest p-8 rounded-[2rem] border border-outline-variant/10 shadow-sm">
+            <h3 className="text-xl font-black text-primary mb-6 flex items-center gap-2">
+              <Bell className="text-secondary" size={22} />
+              Duyurular
+            </h3>
+            <div className="space-y-4">
+              <div className="p-4 bg-accent/5 border border-accent/10 rounded-2xl relative overflow-hidden group hover:bg-accent/10 transition-colors">
+                <div className="flex gap-3">
+                  <Info className="text-accent shrink-0" size={18} />
+                  <div>
+                    <h5 className="text-xs font-bold text-primary mb-1">Kulüp Toplantısı</h5>
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium">Bugün saat 16:00'da S.O.F.T Kulübü toplantısı vardır.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-surface-container rounded-2xl border border-outline-variant/10 hover:border-secondary/20 transition-all">
+                <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium">Yarınki deneme sınavı giriş belgeleri portal üzerinden yayınlanmıştır.</p>
+              </div>
+            </div>
+            <button className="w-full mt-6 py-3 bg-surface-container text-primary text-xs font-black uppercase tracking-widest rounded-xl hover:bg-surface-container-high transition-all flex items-center justify-center gap-2">
+              Tüm Duyuruları Gör
+              <ChevronRight size={14} />
             </button>
           </div>
-          <p className="text-sm text-on-surface-variant mb-6">Bu hafta toplam 12 saat derse katılım sağladın. Hedefine çok yakınsın!</p>
-          <div className="w-full bg-surface-container-highest h-2 rounded-full mb-6">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: '85%' }}
-              transition={{ duration: 1.5 }}
-              className="bg-secondary h-full rounded-full" 
-            />
+
+          {/* Next Lesson Pulse */}
+          <div className="bg-primary p-8 rounded-[2rem] text-secondary shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/10 transition-colors"></div>
+            <h4 className="text-xs font-bold text-white/50 uppercase tracking-[0.2em] mb-6">SIRADAKİ DERS</h4>
+            {nextLesson ? (
+              <>
+                <h5 className="text-3xl font-black text-white mb-2 leading-tight">{nextLesson.title}</h5>
+                <div className="flex items-center gap-2 text-white/70 font-bold mb-8">
+                  <Clock size={16} />
+                  <span>{nextLesson.time.split(' - ')[0]}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 bg-secondary rounded-2xl flex items-center justify-center text-primary shadow-lg shadow-black/20">
+                    <BookOpen size={24} />
+                  </div>
+                  <span className="text-[10px] font-black bg-white/10 px-3 py-1 rounded-full text-white">HAZIRLANIN</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-white font-bold">Bugünlük dersler bitti!</p>
+            )}
           </div>
-          <button className="w-full py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-container transition-all">Analizi Gör</button>
         </div>
       </div>
+
+      {/* Weekly Progress (Moved to bottom or replaced) */}
+      <div className="bg-surface-container-lowest p-10 rounded-[3rem] border border-outline-variant/10 shadow-sm flex flex-col md:flex-row items-center gap-12">
+        <div className="w-24 h-24 shrink-0 bg-primary-container rounded-3xl flex items-center justify-center shadow-xl rotate-3">
+          <CheckCircle className="text-secondary-container" size={48} />
+        </div>
+        <div className="flex-grow">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <h4 className="text-2xl font-black text-primary tracking-tighter">Haftalık Akademik İlerleme</h4>
+            <span className="px-4 py-1.5 bg-secondary text-primary rounded-full text-xs font-black uppercase tracking-widest shadow-sm">%84.5</span>
+          </div>
+          <p className="text-sm text-on-surface-variant font-medium max-w-2xl mb-6">Bu hafta toplam 12 saat derse katılım sağladın. Matematik ve Fizik konularındaki performansın hedefin üzerinde seyrediyor.</p>
+          <div className="w-full bg-surface-container h-3 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: '84.5%' }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              className="bg-accent h-full rounded-full shadow-[0_0_10px_rgba(51,187,197,0.4)]" 
+            />
+          </div>
+        </div>
+        <button className="px-8 py-4 bg-primary text-secondary font-black rounded-2xl text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-all whitespace-nowrap">
+          DETAYLI ANALİZ
+        </button>
+      </div>
+
       {/* Lesson Detail Modal */}
       <AnimatePresence>
         {selectedClass && (
@@ -269,7 +241,7 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-surface-container-lowest rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="h-48 relative">
                 <img 
@@ -284,13 +256,13 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
                 >
                   <X size={20} />
                 </button>
-                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/20 to-transparent" />
               </div>
 
-              <div className="p-8 -mt-12 relative bg-white">
+              <div className="p-8 -mt-12 relative bg-surface-container-lowest">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="px-3 py-1 bg-secondary text-white text-[10px] font-black uppercase tracking-tighter rounded-full">
-                    GÜNCEL DERS
+                  <span className="px-3 py-1 bg-secondary text-primary text-[10px] font-black uppercase tracking-tighter rounded-full">
+                    DERS BİLGİSİ
                   </span>
                   <div className="flex items-center gap-2 text-outline font-bold text-xs">
                     <Clock size={14} />
@@ -308,7 +280,7 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
                   <div className="space-y-4">
                     <h5 className="font-bold text-primary flex items-center gap-2">
                        <FileText size={18} className="text-secondary" />
-                       Der İçeriği
+                       Ders İçeriği
                     </h5>
                     <ul className="space-y-3">
                       {['Konu Anlatımı', 'Pratik Sorular', 'Haftalık Ödev'].map((item, i) => (
@@ -332,7 +304,7 @@ export default function SchedulePage({ role = 'teacher', classes = CLASSES }: Sc
                 </div>
 
                 <div className="flex gap-4">
-                  <button className="flex-1 py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:opacity-90 transition-all">
+                  <button className="flex-1 py-4 bg-primary text-secondary font-black rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:opacity-90 transition-all">
                     <Download size={18} />
                     Materyali İndir
                   </button>

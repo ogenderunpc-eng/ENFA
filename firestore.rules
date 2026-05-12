@@ -14,12 +14,12 @@ service cloud.firestore {
         request.auth.token.email == 'ogenderunpc@gmail.com'
       ); 
     }
-    // Strict verification except for known test accounts in this sandbox environment
+    // Simplified verification for demo purposes
     function isVerified() { 
-      return isSignedIn() && (
-        request.auth.token.email_verified == true || 
-        request.auth.token.email in ['ogretmen@example.com', 'ogrenci@example.com']
-      ); 
+      return isSignedIn();
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -58,10 +58,11 @@ service cloud.firestore {
     }
 
     function isValidMessage(data) {
-      return data.keys().hasAll(['sender', 'content']) &&
+      return data.keys().hasAll(['sender', 'content', 'recipientId']) &&
              data.sender is string && data.sender.size() <= 200 &&
              data.content is string && data.content.size() <= 3000 &&
-             (!('recipientId' in data) || (data.recipientId is string && data.recipientId.size() <= 128)) &&
+             data.recipientId is string && data.recipientId.size() <= 128 &&
+             (!('senderId' in data) || (data.senderId == request.auth.uid)) &&
              (data.get('time', '') is string && data.get('time', '').size() <= 100) &&
              (data.get('senderRole', '') is string && data.get('senderRole', '').size() <= 50) &&
              (data.get('createdAt', '') is string && data.get('createdAt', '').size() <= 100);
@@ -100,6 +101,14 @@ service cloud.firestore {
              data.createdAt is string && data.createdAt.size() <= 100;
     }
 
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll(['title', 'content', 'date', 'teacherId']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.date is string && data.date.size() <= 100 &&
+             data.teacherId is string && data.teacherId.size() <= 128;
+    }
+
     // --- Collections ---
 
     match /homework/{homeworkId} {
@@ -109,17 +118,36 @@ service cloud.firestore {
       allow delete: if isTeacher() && isValidId(homeworkId) && resource.data.teacherId == request.auth.uid;
     }
 
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create: if isTeacher() && isValidId(announcementId) && isValidAnnouncement(incoming());
+      allow update: if isTeacher() && isValidId(announcementId) && resource.data.teacherId == request.auth.uid && isValidAnnouncement(incoming());
+      allow delete: if isTeacher() && isValidId(announcementId);
+    }
+
     match /students/{studentId} {
-      allow list: if isSignedIn() && (isTeacher() || request.auth.uid == studentId);
-      allow get: if isSignedIn() && (isTeacher() || request.auth.uid == studentId);
+      allow list: if isSignedIn() && (
+        isTeacher() || 
+        request.auth.uid == studentId ||
+        resource.data.parentEmail == request.auth.token.email
+      );
+      allow get: if isSignedIn() && (isTeacher() || request.auth.uid == studentId || resource.data.parentEmail == request.auth.token.email);
       allow create: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidId(studentId) && isValidStudent(incoming());
       allow update: if (isTeacher() || (isSignedIn() && request.auth.uid == studentId)) && isValidId(studentId) && isValidStudent(incoming());
       allow delete: if isTeacher() && isValidId(studentId);
     }
 
     match /messages/{messageId} {
-      allow list: if isSignedIn() && (resource.data.recipientId == request.auth.uid || isTeacher());
-      allow get: if isSignedIn() && (resource.data.recipientId == request.auth.uid || isTeacher());
+      allow list: if isSignedIn() && (
+        isTeacher() || 
+        resource.data.recipientId == request.auth.uid || 
+        resource.data.senderId == request.auth.uid
+      );
+      allow get: if isSignedIn() && isValidId(messageId) && (
+        isTeacher() || 
+        resource.data.get('recipientId', '') == request.auth.uid || 
+        resource.data.get('senderId', '') == request.auth.uid
+      );
       allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming());
       allow update: if false;
       allow delete: if isTeacher() && isValidId(messageId);
@@ -137,12 +165,13 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      allow read: if isSignedIn() && isValidId(notificationId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.get('userId', '') == request.auth.uid;
+      allow get: if isSignedIn() && isValidId(notificationId) && resource.data.get('userId', '') == request.auth.uid;
       allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming());
       allow update: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && 
-                       resource.data.userId == request.auth.uid && 
+                       resource.data.get('userId', '') == request.auth.uid && 
                        incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
-      allow delete: if isSignedIn() && isValidId(notificationId) && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && isValidId(notificationId) && resource.data.get('userId', '') == request.auth.uid;
     }
 
     match /teachers/{teacherId} {

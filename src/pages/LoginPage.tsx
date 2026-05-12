@@ -228,7 +228,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   <div className="grid grid-cols-1 gap-4">
                     <button 
                       onClick={() => handleRoleSelect('teacher')}
-                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-white transition-all text-left shadow-sm"
+                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-surface-container-high transition-all text-left shadow-sm"
                     >
                       <div className="w-16 h-16 rounded-xl bg-black text-secondary flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
                         <GraduationCap size={32} />
@@ -242,7 +242,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
                     <button 
                       onClick={() => handleRoleSelect('parent')}
-                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-white transition-all text-left shadow-sm"
+                      className="group flex items-center p-6 rounded-2xl bg-surface-container-low border-2 border-transparent hover:border-secondary hover:bg-surface-container-high transition-all text-left shadow-sm"
                     >
                       <div className="w-16 h-16 rounded-xl bg-secondary text-black flex items-center justify-center mr-6 group-hover:scale-110 transition-transform">
                         <Users size={32} />

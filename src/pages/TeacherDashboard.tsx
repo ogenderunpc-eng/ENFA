@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2, Sparkles, Send, ShieldCheck, UserMinus, UserPlus, Users } from 'lucide-react';
+import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2, Sparkles, Send, ShieldCheck, UserMinus, UserPlus, Users, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Message, ClassSession, Student } from '../types';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, writeBatch, onSnapshot, setDoc } from 'firebase/firestore';
+import { Message, ClassSession, Student, Announcement } from '../types';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc, writeBatch, onSnapshot, setDoc } from 'firebase/firestore';
 import StudentCard from '../components/StudentCard';
 
 interface AttendanceRecord {
@@ -16,6 +16,7 @@ interface AttendanceRecord {
 }
 
 interface TeacherDashboardProps {
+  announcements: Announcement[];
   classes: ClassSession[];
   messages: Message[];
   students: Student[];
@@ -24,11 +25,15 @@ interface TeacherDashboardProps {
   activeTab?: string;
 }
 
-export default function TeacherDashboard({ classes, messages, students, setClasses, onNavigate, activeTab = 'home' }: TeacherDashboardProps) {
+export default function TeacherDashboard({ announcements, classes, messages, students, setClasses, onNavigate, activeTab = 'home' }: TeacherDashboardProps) {
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [isViewingReport, setIsViewingReport] = useState(false);
   const [isTakingAttendance, setIsTakingAttendance] = useState(false);
   const [isManagingAttendance, setIsManagingAttendance] = useState(false);
+  const [isManagingAnnouncements, setIsManagingAnnouncements] = useState(false);
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '' });
+
   const [isGeneratingAIReport, setIsGeneratingAIReport] = useState(false);
   const [aiReportContent, setAiReportContent] = useState('');
   const [attendance, setAttendance] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
@@ -119,6 +124,57 @@ export default function TeacherDashboard({ classes, messages, students, setClass
     attendance: 0,
     status: 'present' as 'present' | 'absent' | 'late'
   });
+
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [isDeletingStudent, setIsDeletingStudent] = useState(false);
+
+  const handleDeleteStudent = async (id: string) => {
+    if (!window.confirm('Bu talebenin kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
+    
+    setIsDeletingStudent(true);
+    try {
+      await deleteDoc(doc(db, 'students', id));
+      setIsManagingStudent(false);
+      setToastMessage('Talebe kaydı başarıyla silindi.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `students/${id}`);
+    } finally {
+      setIsDeletingStudent(false);
+    }
+  };
+
+  const handleBroadcastMessage = async () => {
+    if (!messageText.trim()) return;
+    
+    setIsSendingMessage(true);
+    try {
+      const batch = writeBatch(db);
+      students.forEach(student => {
+        const msgRef = doc(collection(db, 'messages'));
+        batch.set(msgRef, {
+          sender: 'Muallim',
+          senderRole: 'teacher',
+          content: messageText,
+          time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+          recipientId: student.id,
+          createdAt: new Date().toISOString()
+        });
+      });
+      
+      await batch.commit();
+      setMessageText('');
+      setIsBroadcasting(false);
+      setToastMessage('Duyuru tüm talebelere iletildi.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'messages/broadcast');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
 
   const handleUpdateStudentMetrics = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,7 +278,6 @@ export default function TeacherDashboard({ classes, messages, students, setClass
   const handleRingBell = () => {
     if (isRinging || isAudioLoading) {
       if (isRinging) {
-        // Allow stopping if already playing
         if (audioRef.current) {
           audioRef.current.pause();
           audioRef.current.currentTime = 0;
@@ -233,8 +288,6 @@ export default function TeacherDashboard({ classes, messages, students, setClass
     }
     
     setIsAudioLoading(true);
-    
-    // Using the local server proxy to bypass CORS and network restrictions
     const audio = new Audio();
     audio.src = '/api/bell-proxy';
     audio.preload = "auto";
@@ -245,7 +298,6 @@ export default function TeacherDashboard({ classes, messages, students, setClass
       setIsRinging(true);
       audio.play().catch(e => {
         console.error('Ses çalma başlatılamadı:', e);
-        // Final desperate fallback if even the local proxy fails (user interaction might be lost)
         setIsRinging(false);
       });
     };
@@ -260,18 +312,55 @@ export default function TeacherDashboard({ classes, messages, students, setClass
       setIsRinging(false);
     };
 
-    // If it takes too long to load, try to play anyway
     setTimeout(() => {
       if (isAudioLoading) playAudio();
     }, 3000);
 
-    // Auto-stop after 20 seconds
     setTimeout(() => {
       if (audioRef.current === audio) {
         setIsRinging(false);
         audio.pause();
       }
     }, 20000);
+  };
+
+  const handleAddAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAnnouncement.title || !newAnnouncement.content || !auth.currentUser) return;
+
+    setIsSavingAnnouncement(true);
+    try {
+      await addDoc(collection(db, 'announcements'), {
+        title: newAnnouncement.title,
+        content: newAnnouncement.content,
+        date: new Date().toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        teacherId: auth.currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
+      
+      setNewAnnouncement({ title: '', content: '' });
+      setIsManagingAnnouncements(false);
+      setToastMessage('Duyuru başarıyla yayınlandı!');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'announcements');
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!window.confirm('Bu duyuruyu silmek istediğinize emin misiniz?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'announcements', id));
+      setToastMessage('Duyuru silindi.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `announcements/${id}`);
+    }
   };
 
   const handleAddClass = async (e: React.FormEvent) => {
@@ -356,6 +445,20 @@ export default function TeacherDashboard({ classes, messages, students, setClass
           
             <div className="flex flex-wrap gap-3">
               <button 
+                onClick={() => setIsManagingAnnouncements(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-secondary text-primary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-secondary/10"
+              >
+                <Bell size={20} />
+                <span className="font-semibold">Duyuru Yönetimi</span>
+              </button>
+              <button 
+                onClick={() => setIsBroadcasting(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-surface-container-highest text-primary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-md shadow-black/5"
+              >
+                <MessageSquare size={20} />
+                <span className="font-semibold">Toplu Mesaj</span>
+              </button>
+              <button 
                 onClick={() => setIsAddingStudent(true)}
                 className="flex items-center gap-2 px-6 py-3 bg-primary text-secondary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/10"
               >
@@ -402,21 +505,21 @@ export default function TeacherDashboard({ classes, messages, students, setClass
           <div className="info-card text-center">
             <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Öğrenci</p>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-accent">66</span>
+              <span className="text-4xl font-black text-secondary">66</span>
               <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">+2</span>
             </div>
           </div>
           <div className="info-card text-center">
             <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Genel Başarı Oranı</p>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-accent">%84.5</span>
+              <span className="text-4xl font-black text-secondary">%84.5</span>
               <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">1.4</span>
             </div>
           </div>
           <div className="info-card text-center">
             <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yoklama Durumu</p>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-accent">%98</span>
+              <span className="text-4xl font-black text-secondary">%98</span>
               <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Tamam</span>
             </div>
           </div>
@@ -836,7 +939,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8 max-h-[85vh] flex flex-col overflow-hidden"
+              className="relative w-full max-w-lg bg-surface-container-lowest rounded-3xl shadow-2xl p-8 max-h-[85vh] flex flex-col overflow-hidden"
             >
               <div className="flex justify-between items-center mb-6">
                 <div>
@@ -889,7 +992,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 max-h-[85vh] flex flex-col overflow-hidden"
+              className="relative w-full max-w-2xl bg-surface-container-lowest rounded-3xl shadow-2xl p-8 max-h-[85vh] flex flex-col overflow-hidden"
             >
               <div className="flex justify-between items-center mb-6">
                 <div>
@@ -948,6 +1051,76 @@ export default function TeacherDashboard({ classes, messages, students, setClass
         )}
       </AnimatePresence>
 
+      {/* Broadcast Message Modal */}
+      <AnimatePresence>
+        {isBroadcasting && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsBroadcasting(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black text-primary">Tüm Sınıfa Duyuru</h2>
+                    <p className="text-on-surface-variant text-xs font-bold uppercase tracking-widest">({students.length} Talebeye İletilecek)</p>
+                  </div>
+                  <button onClick={() => setIsBroadcasting(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                    <X size={24} className="text-outline" />
+                  </button>
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">Duyuru Metni</label>
+                    <textarea 
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      placeholder="Dersi takip etmeyi unutmayın..."
+                      className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-medium text-sm min-h-[120px]"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <button 
+                      type="button"
+                      onClick={() => setIsBroadcasting(false)}
+                      className="flex-grow py-4 bg-surface-container font-bold text-primary rounded-xl hover:bg-surface-container-high transition-colors"
+                    >
+                      İptal
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleBroadcastMessage}
+                      disabled={isSendingMessage || !messageText.trim()}
+                      className="flex-grow py-4 bg-secondary text-primary font-bold rounded-xl shadow-lg shadow-secondary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    >
+                      {isSendingMessage ? (
+                        <Loader2 size={20} className="animate-spin" />
+                      ) : (
+                        <>
+                          <Send size={18} />
+                          Duyuruyu Paylaş
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Student Management Modal */}
       <AnimatePresence>
         {isManagingStudent && editingStudent && (
@@ -963,7 +1136,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-8">
                 <div className="flex justify-between items-center mb-6">
@@ -980,9 +1153,20 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                       <p className="text-on-surface-variant text-xs font-bold uppercase tracking-widest">{editingStudent.class || 'Sınıf Yok'} Yönetimi</p>
                     </div>
                   </div>
-                  <button onClick={() => setIsManagingStudent(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
-                    <X size={24} className="text-outline" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => handleDeleteStudent(editingStudent.id)}
+                      disabled={isDeletingStudent}
+                      className="p-2 text-error hover:bg-error/10 rounded-full transition-colors"
+                      title="Kaydı Sil"
+                    >
+                      {isDeletingStudent ? <Loader2 size={24} className="animate-spin" /> : <UserMinus size={24} />}
+                    </button>
+                    <button onClick={() => setIsManagingStudent(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                      <X size={24} className="text-outline" />
+                    </button>
+                  </div>
                 </div>
                 
                 <form onSubmit={handleUpdateStudentMetrics} className="space-y-6">
@@ -1093,7 +1277,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-8">
                 <div className="flex justify-between items-center mb-6">
@@ -1190,7 +1374,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-4xl bg-surface-container-lowest rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8">
                 <div className="flex items-center gap-4">
@@ -1221,9 +1405,9 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-white border border-outline-variant/10 p-5 rounded-2xl shadow-sm">
+                    <div className="bg-surface-container border border-outline-variant/10 p-5 rounded-2xl shadow-sm">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg flex items-center justify-center">
                           <UserPlus size={18} />
                         </div>
                         <span className="text-sm font-bold text-primary">Katılım Oranı</span>
@@ -1231,9 +1415,9 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                       <p className="text-3xl font-black text-primary">%94</p>
                       <p className="text-xs text-on-surface-variant mt-1">Önceki güne göre +2%</p>
                     </div>
-                    <div className="bg-white border border-outline-variant/10 p-5 rounded-2xl shadow-sm">
+                    <div className="bg-surface-container border border-outline-variant/10 p-5 rounded-2xl shadow-sm">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 bg-secondary/10 text-secondary rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-secondary/10 dark:bg-secondary/20 text-secondary rounded-lg flex items-center justify-center">
                           <BarChart3 size={18} />
                         </div>
                         <span className="text-sm font-bold text-primary">Anlaşılma Oranı</span>
@@ -1266,7 +1450,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                    <div className="p-6 bg-surface-container-low rounded-3xl border border-outline-variant/10">
                       <h5 className="text-xs font-bold text-primary uppercase tracking-widest mb-4">Sınıf Dosyaları</h5>
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-outline-variant/10">
+                        <div className="flex items-center gap-3 p-3 bg-surface-container rounded-xl border border-outline-variant/10">
                           <FileText className="text-secondary" size={18} />
                           <span className="text-[10px] font-bold text-primary truncate">Ders_Plani_Mat.pdf</span>
                         </div>
@@ -1310,7 +1494,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8"
+              className="relative w-full max-w-md bg-surface-container-lowest rounded-3xl shadow-2xl p-8"
             >
               <div className="flex justify-between items-center mb-6">
                 <h4 className="text-2xl font-bold text-primary">Yeni Ders Ekle</h4>
@@ -1399,7 +1583,7 @@ export default function TeacherDashboard({ classes, messages, students, setClass
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 overflow-hidden"
+              className="relative w-full max-w-2xl bg-surface-container-lowest rounded-3xl shadow-2xl p-8 overflow-hidden"
             >
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -1460,6 +1644,102 @@ export default function TeacherDashboard({ classes, messages, students, setClass
                     <UserCheck size={18} />
                     Yoklama Al
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      
+      {/* Announcement Management Modal */}
+      <AnimatePresence>
+        {isManagingAnnouncements && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsManagingAnnouncements(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-8 pb-4">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black text-primary">Duyuru Yönetimi</h2>
+                    <p className="text-on-surface-variant text-xs font-bold uppercase tracking-widest">Sistem geneline duyuru yayınlayın</p>
+                  </div>
+                  <button onClick={() => setIsManagingAnnouncements(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                    <X size={24} className="text-outline" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-8 space-y-8 custom-scrollbar pb-8">
+                {/* Form to add new announcement */}
+                <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10">
+                  <h3 className="text-sm font-black text-primary uppercase tracking-widest mb-4">Yeni Duyuru Yayınla</h3>
+                  <form onSubmit={handleAddAnnouncement} className="space-y-4">
+                    <div>
+                      <input 
+                        type="text"
+                        value={newAnnouncement.title}
+                        onChange={(e) => setNewAnnouncement({...newAnnouncement, title: e.target.value})}
+                        placeholder="Duyuru Başlığı"
+                        className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-bold text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <textarea 
+                        value={newAnnouncement.content}
+                        onChange={(e) => setNewAnnouncement({...newAnnouncement, content: e.target.value})}
+                        placeholder="Duyuru içeriği..."
+                        className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-medium text-sm min-h-[100px]"
+                        required
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      disabled={isSavingAnnouncement || !newAnnouncement.title || !newAnnouncement.content}
+                      className="w-full py-3 bg-primary text-secondary font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    >
+                      {isSavingAnnouncement ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+                      HERKESE DUYUR
+                    </button>
+                  </form>
+                </div>
+
+                {/* List of existing announcements */}
+                <div>
+                  <h3 className="text-sm font-black text-primary uppercase tracking-widest mb-4">Mevcut Duyurular</h3>
+                  <div className="space-y-3">
+                    {announcements.length > 0 ? announcements.map((ann) => (
+                      <div key={ann.id} className="p-4 bg-surface-container rounded-xl border border-outline-variant/5 group">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold text-primary text-sm">{ann.title}</h4>
+                          <button 
+                            onClick={() => handleDeleteAnnouncement(ann.id)}
+                            className="text-error opacity-0 group-hover:opacity-100 p-1 hover:bg-error/10 rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                        <p className="text-xs text-on-surface-variant mb-2 line-clamp-3">{ann.content}</p>
+                        <span className="text-[10px] text-outline font-medium tracking-wider">{ann.date}</span>
+                      </div>
+                    )) : (
+                      <div className="text-center py-8 text-on-surface-variant/60">
+                        <Bell size={32} className="mx-auto mb-2 opacity-20" />
+                        <p className="text-xs font-medium">Henüz yayınlanmış bir duyuru bulunmuyor.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>

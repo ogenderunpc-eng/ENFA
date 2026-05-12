@@ -110,9 +110,25 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "description", "deadline", "teacherId", "classId", "createdAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Public announcements for all users.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "teacherId": { "type": "string" }
+      },
+      "required": ["title", "content", "date", "teacherId"]
     }
   },
   "firestore": {
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Global announcements."
+    },
     "/homework/{homeworkId}": {
       "schema": "Homework",
       "description": "Homework assignments."
