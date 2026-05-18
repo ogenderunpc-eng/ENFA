@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Role, Student, ClassSession, Message } from './types';
+import { Role, Student, ClassSession, Message, Announcement } from './types';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import TeacherDashboard from './pages/TeacherDashboard';
@@ -235,8 +235,8 @@ export default function App() {
         );
       default:
         return role === 'teacher' 
-          ? <TeacherDashboard messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} /> 
-          : <ParentDashboard messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} />;
+          ? <TeacherDashboard announcements={announcements} messages={messages} classes={classes} students={students} setClasses={setClasses} onNavigate={setActiveTab} /> 
+          : <ParentDashboard announcements={announcements} messages={messages} classes={classes} userName={userName} onNavigate={setActiveTab} />;
     }
   };
 

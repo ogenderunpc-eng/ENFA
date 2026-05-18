@@ -122,9 +122,28 @@
         "teacherId": { "type": "string" }
       },
       "required": ["title", "content", "date", "teacherId"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Attendance records for a class session.",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string" },
+        "date": { "type": "string" },
+        "records": { 
+          "type": "object",
+          "description": "Map of student IDs to their status (present, absent, late)"
+        },
+        "teacherId": { "type": "string" }
+      },
+      "required": ["classId", "date", "records", "teacherId"]
     }
   },
   "firestore": {
+    "/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Daily attendance logs."
+    },
     "/announcements/{announcementId}": {
       "schema": "Announcement",
       "description": "Global announcements."

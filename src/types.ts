@@ -70,6 +70,7 @@ export interface Student {
   parentName?: string;
   ktsResults?: KTSResult[];
   password?: string;
+  parentEmail?: string;
 }
 
 export interface AppNotification {

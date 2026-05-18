@@ -1751,10 +1751,10 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
       <AnimatePresence>
         {showNotification && (
           <motion.div 
-            initial={{ opacity: 0, y: 50, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 20, x: '-50%' }}
-            className="fixed bottom-8 left-1/2 z-[200] bg-primary text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
+            initial={{ opacity: 0, y: -20, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -20, x: 20 }}
+            className="fixed top-8 right-8 z-[200] bg-primary text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
           >
             <CheckCircle2 className="text-secondary" size={24} />
             <span className="font-bold">{toastMessage || 'Etkinlik başarıyla takviminize eklendi!'}</span>
