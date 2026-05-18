@@ -88,22 +88,6 @@ export default function App() {
           }
         }
 
-        if (user.email === 'ogrenci@example.com') {
-          await setDoc(doc(db, 'students', user.uid), {
-            id: user.uid,
-            name: 'Demo Öğrenci',
-            number: '101',
-            class: '12-A',
-            email: user.email,
-            parentEmail: user.email,
-            role: 'parent',
-            attendance: 100,
-            status: 'present',
-            grades: [],
-            ktsResults: [],
-            createdAt: new Date().toISOString()
-          }, { merge: true });
-        }
         
         // Determine role and user details
         // Check if teacher
