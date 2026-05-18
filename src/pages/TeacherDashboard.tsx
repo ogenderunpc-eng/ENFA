@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserCheck, Edit3, BarChart3, MessageSquare, ArrowRight, FileText, Clock, Plus, X, Bell, BellRing, BookOpen, CheckCircle2, Loader2, Sparkles, Send, ShieldCheck, UserMinus, UserPlus, Users, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Message, ClassSession, Student, Announcement } from '../types';
+import { Message, ClassSession, Student, Announcement, Exam, ExamResult, CalendarEvent } from '../types';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc, writeBatch, onSnapshot, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc, writeBatch, onSnapshot, setDoc, limit } from 'firebase/firestore';
 import StudentCard from '../components/StudentCard';
 
 interface AttendanceRecord {
@@ -25,15 +25,154 @@ interface TeacherDashboardProps {
   activeTab?: string;
 }
 
+interface ExamResultCardProps {
+  exam: Exam;
+  key?: string;
+}
+
+function ExamResultCard({ exam }: ExamResultCardProps) {
+  const [results, setResults] = useState<ExamResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (isExpanded) {
+      const q = query(collection(db, 'talebe_sonuclari'), where('sinav_id', '==', exam.id), orderBy('net', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const resultsList: ExamResult[] = [];
+        snapshot.forEach(doc => {
+          resultsList.push({ id: doc.id, ...doc.data() } as ExamResult);
+        });
+        setResults(resultsList);
+        setLoading(false);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'talebe_sonuclari');
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    }
+  }, [isExpanded, exam.id]);
+
+  return (
+    <div className="bg-[#1A1C23] border border-[#2D2E33] rounded-[2rem] overflow-hidden transition-all hover:border-secondary/30">
+      <div 
+        className="p-8 cursor-pointer flex items-center justify-between group"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 bg-[#0E1117] rounded-2xl flex flex-col items-center justify-center border border-white/5 group-hover:border-secondary/20 transition-all">
+            <span className="text-[10px] font-black text-secondary tracking-widest leading-none mb-1">PDF</span>
+            <FileText size={24} className="text-white/60 group-hover:text-secondary transition-all" />
+          </div>
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h4 className="text-xl font-black text-white group-hover:text-secondary transition-colors">{exam.sinav_adi}</h4>
+              <span className="px-3 py-1 bg-secondary/10 text-secondary rounded-lg text-[9px] font-black uppercase tracking-widest border border-secondary/20">{exam.ders}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-bold text-[#666] flex items-center gap-1.5">
+                <Clock size={14} />
+                {exam.tarih}
+              </span>
+              <span className="text-xs font-bold text-[#666] flex items-center gap-1.5">
+                <BookOpen size={14} />
+                {exam.toplam_soru} Soru
+              </span>
+              <span className="text-xs font-bold text-green-500/80 flex items-center gap-1.5">
+                <CheckCircle2 size={14} />
+                {results.length} Katılım
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className={`p-3 bg-[#0E1117] rounded-xl border border-white/5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+          <Plus size={20} className="text-white/40" />
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-[#2D2E33] bg-[#0E1117]/50"
+          >
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h5 className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] opacity-70">📊 Talebe Başarı Tablosu</h5>
+                <button className="text-[10px] font-black text-white/20 hover:text-white uppercase tracking-widest transition-all">Excel Olarak Al</button>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="animate-spin text-secondary" size={32} />
+                </div>
+              ) : results.length > 0 ? (
+                <div className="overflow-hidden rounded-2xl border border-white/5">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-[#1A1C23]">
+                      <tr>
+                        <th className="py-4 px-6 text-[9px] font-black text-[#666] uppercase tracking-widest">Talebe</th>
+                        <th className="py-4 px-6 text-[9px] font-black text-[#666] uppercase tracking-widest text-center">Doğru</th>
+                        <th className="py-4 px-6 text-[9px] font-black text-[#666] uppercase tracking-widest text-center">Yanlış</th>
+                        <th className="py-4 px-6 text-[9px] font-black text-[#666] uppercase tracking-widest text-center">Boş</th>
+                        <th className="py-4 px-6 text-[9px] font-black text-secondary uppercase tracking-widest text-right">Net</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {results.map((result, idx) => (
+                        <tr key={result.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-black text-white/20 w-4">{idx + 1}</span>
+                              <span className="text-sm font-bold text-white">{result.talebe_isim}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-center font-bold text-green-500 text-sm">{result.dogru}</td>
+                          <td className="py-4 px-6 text-center font-bold text-error text-sm">{result.yanlis}</td>
+                          <td className="py-4 px-6 text-center font-bold text-[#666] text-sm">{result.bos}</td>
+                          <td className="py-4 px-6 text-right">
+                            <span className="px-4 py-1.5 bg-secondary text-primary rounded-xl text-xs font-black">{result.net.toFixed(2)}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-[#1A1C23] rounded-3xl border border-dashed border-[#2D2E33]">
+                  <p className="text-xs font-bold text-[#444] uppercase tracking-widest">Henüz hiçbir talebe bu testi yanıtlamadı</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function TeacherDashboard({ announcements, classes, messages, students, setClasses, onNavigate, activeTab = 'home' }: TeacherDashboardProps) {
-  const [isAddingClass, setIsAddingClass] = useState(false);
+  const [activePanel, setActivePanel] = useState<'reports' | 'exams' | 'calendar'>('reports');
   const [isViewingReport, setIsViewingReport] = useState(false);
+  const [isAddingClass, setIsAddingClass] = useState(false);
   const [isTakingAttendance, setIsTakingAttendance] = useState(false);
   const [isManagingAttendance, setIsManagingAttendance] = useState(false);
-  const [isManagingAnnouncements, setIsManagingAnnouncements] = useState(false);
-  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
-  const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '' });
-
+  const [isManagingAvatars, setIsManagingAvatars] = useState(false);
+  const [isPublishingExam, setIsPublishingExam] = useState(false);
+  const [isSavingExam, setIsSavingExam] = useState(false);
+  const [newExam, setNewExam] = useState({ 
+    sinav_adi: '', 
+    ders: 'Matematik', 
+    toplam_soru: 40,
+    pdf_data: '',
+    pdf_name: ''
+  });
+  const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarStudentId, setAvatarStudentId] = useState<string>('');
+  
   const [isGeneratingAIReport, setIsGeneratingAIReport] = useState(false);
   const [aiReportContent, setAiReportContent] = useState('');
   const [attendance, setAttendance] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
@@ -47,7 +186,43 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
   const [showNotification, setShowNotification] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [isSavingCalendarEvent, setIsSavingCalendarEvent] = useState(false);
+  const [newCalendarEvent, setNewCalendarEvent] = useState({
+    etkinlik_adi: '',
+    tur: 'Sınav' as CalendarEvent['tur'],
+    tarih: new Date().toISOString().split('T')[0]
+  });
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, 'takvim_etkinlikleri'), orderBy('tarih', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const events: CalendarEvent[] = [];
+      snapshot.forEach(doc => {
+        events.push({ id: doc.id, ...doc.data() } as CalendarEvent);
+      });
+      setCalendarEvents(events);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'takvim_etkinlikleri');
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'sinavlar'), orderBy('createdAt', 'desc'), limit(50));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const examList: Exam[] = [];
+      snapshot.forEach(doc => {
+        examList.push({ id: doc.id, ...doc.data() } as Exam);
+      });
+      setExams(examList);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'sinavlar');
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     // Initialize attendance with everyone present by default
@@ -128,8 +303,40 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
 
+  const exportToExcel = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
+      
+      const exportData = students.map(student => ({
+        'Talebe Adı': student.name,
+        'Numarası': student.number,
+        'Sınıfı': student.class,
+        'Veli Adı': student.parentName,
+        'Hız/KTS Ortalaması': student.ktsResults?.length 
+          ? (student.ktsResults.reduce((acc, curr) => acc + curr.score, 0) / student.ktsResults.length).toFixed(1) 
+          : 'Yok'
+      }));
+
+      const worksheet = utils.json_to_sheet(exportData);
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, "Enderun Talebe Raporu");
+      
+      const fileName = `Enderun_Talebe_Raporu_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.xlsx`;
+      writeFile(workbook, fileName);
+      
+      setToastMessage('Rapor Excel olarak hazırlandı ve indiriliyor.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      console.error('Excel dışa aktarma hatası:', error);
+      setToastMessage('Rapor oluşturulurken bir hata oluştu.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    }
+  };
+
   const handleDeleteStudent = async (id: string) => {
-    if (!window.confirm('Bu talebenin kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
+    if (!window.confirm('Bu talebe kaydı kalıcı olarak silinecektir. Bu işlem geri alınamaz! Onaylıyor musunuz?')) return;
     
     setIsDeletingStudent(true);
     try {
@@ -275,6 +482,68 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
 
   const nextClass = classes.find(c => c.status === 'next') || classes[0];
 
+  const handleUpdateAvatar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!avatarStudentId || !avatarPreview) return;
+
+    setIsUpdatingAvatar(true);
+    try {
+      const studentDocRef = doc(db, 'students', avatarStudentId);
+      await setDoc(studentDocRef, { avatar: avatarPreview }, { merge: true });
+      
+      setToastMessage('Profil resmi başarıyla güncellendi.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      setIsManagingAvatars(false);
+      setAvatarPreview(null);
+      setAvatarStudentId('');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${avatarStudentId}`);
+    } finally {
+      setIsUpdatingAvatar(false);
+    }
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const img = new Image();
+        img.onload = () => {
+          // Resize to max 400x400
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 400;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Compress to 70% quality jpeg
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setAvatarPreview(compressedBase64);
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleRingBell = () => {
     if (isRinging || isAudioLoading) {
       if (isRinging) {
@@ -324,32 +593,6 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
     }, 20000);
   };
 
-  const handleAddAnnouncement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAnnouncement.title || !newAnnouncement.content || !auth.currentUser) return;
-
-    setIsSavingAnnouncement(true);
-    try {
-      await addDoc(collection(db, 'announcements'), {
-        title: newAnnouncement.title,
-        content: newAnnouncement.content,
-        date: new Date().toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        teacherId: auth.currentUser.uid,
-        createdAt: new Date().toISOString()
-      });
-      
-      setNewAnnouncement({ title: '', content: '' });
-      setIsManagingAnnouncements(false);
-      setToastMessage('Duyuru başarıyla yayınlandı!');
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'announcements');
-    } finally {
-      setIsSavingAnnouncement(false);
-    }
-  };
-
   const handleDeleteAnnouncement = async (id: string) => {
     if (!window.confirm('Bu duyuruyu silmek istediğinize emin misiniz?')) return;
     
@@ -382,6 +625,55 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
       setIsAddingClass(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'classes');
+    }
+  };
+
+  const handlePublishExam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExam.sinav_adi || !newExam.pdf_data || !auth.currentUser) return;
+
+    setIsSavingExam(true);
+    try {
+      const t_tarih = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
+      
+      await addDoc(collection(db, 'sinavlar'), {
+        sinav_adi: newExam.sinav_adi,
+        ders: newExam.ders,
+        toplam_soru: Number(newExam.toplam_soru),
+        tarih: t_tarih,
+        pdf_data: newExam.pdf_data,
+        pdf_name: newExam.pdf_name,
+        teacherId: auth.currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
+      
+      setNewExam({ 
+        sinav_adi: '', 
+        ders: 'Matematik', 
+        toplam_soru: 40,
+        pdf_data: '',
+        pdf_name: ''
+      });
+      setIsPublishingExam(false);
+      setToastMessage('Test ve PDF başarıyla sınıfa dağıtıldı!');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'sinavlar');
+    } finally {
+      setIsSavingExam(false);
+    }
+  };
+
+  const handlePDFFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        setNewExam(prev => ({ ...prev, pdf_data: base64String, pdf_name: file.name }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -430,185 +722,281 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
     }
   };
 
+  const handleAddCalendarEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCalendarEvent.etkinlik_adi || !auth.currentUser) return;
+
+    setIsSavingCalendarEvent(true);
+    try {
+      await addDoc(collection(db, 'takvim_etkinlikleri'), {
+        ...newCalendarEvent,
+        teacherId: auth.currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
+      
+      setNewCalendarEvent({
+        etkinlik_adi: '',
+        tur: 'Sınav',
+        tarih: new Date().toISOString().split('T')[0]
+      });
+      setToastMessage('Sınav takvime başarıyla eklendi!');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'takvim_etkinlikleri');
+    } finally {
+      setIsSavingCalendarEvent(false);
+    }
+  };
+
+  const handleDeleteCalendarEvent = async (id: string) => {
+    if (!window.confirm('Bu sınavı takvimden silmek istediğinize emin misiniz?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'takvim_etkinlikleri', id));
+      setToastMessage('Sınav takvimden kaldırıldı.');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `takvim_etkinlikleri/${id}`);
+    }
+  };
+
   return (
     <div className="space-y-12">
       {/* Welcome & Fast Actions */}
       <section>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
           >
-            <p className="text-secondary font-semibold tracking-wide uppercase text-xs mb-2">Hoş Geldiniz, Muallim Yılmaz</p>
-            <h2 className="text-4xl font-extrabold text-primary leading-tight">📊 Muallim Paneli / {activeTab === 'portal' ? 'Yoklama Al' : activeTab === 'kts' ? 'Not Girişi' : 'Sınıf Özeti'}</h2>
+            <h2 className="text-5xl font-black text-primary leading-tight tracking-tighter">Öğretmen Paneli</h2>
           </motion.div>
           
+          <div className="flex bg-[#1A1C23] p-1.5 rounded-2xl border border-[#2D2E33] shadow-lg">
+            <button 
+              onClick={() => setActivePanel('reports')}
+              className={`px-6 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${activePanel === 'reports' ? 'bg-secondary text-primary' : 'text-white/40 hover:text-white'}`}
+            >
+              Genel Rapor & Duyuru
+            </button>
+            <button 
+              onClick={() => setActivePanel('exams')}
+              className={`px-6 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activePanel === 'exams' ? 'bg-secondary text-primary' : 'text-white/40 hover:text-white'}`}
+            >
+              📚 Sınıf Test & PDF Odası
+            </button>
+            <button 
+              onClick={() => setActivePanel('calendar')}
+              className={`px-6 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activePanel === 'calendar' ? 'bg-secondary text-primary' : 'text-white/40 hover:text-white'}`}
+            >
+              📅 Sınav Takvimi
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {activePanel === 'reports' ? (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="reports-panel"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-12"
+          >
             <div className="flex flex-wrap gap-3">
               <button 
-                onClick={() => setIsManagingAnnouncements(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-secondary text-primary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-secondary/10"
+                onClick={() => setIsViewingReport(true)}
+                className="flex items-center gap-2 px-6 py-4 bg-primary text-secondary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-xl shadow-primary/20 border-b-4 border-primary-dark"
               >
-                <Bell size={20} />
-                <span className="font-semibold">Duyuru Yönetimi</span>
+                <BarChart3 size={24} />
+                <div className="text-left">
+                  <span className="block text-sm font-black uppercase tracking-wider">Durum Raporu</span>
+                  <span className="block text-[10px] opacity-70">Excel Al & Analiz Et</span>
+                </div>
+              </button>
+              <button 
+                onClick={() => setIsManagingAvatars(true)}
+                className="flex items-center gap-2 px-6 py-4 bg-[#1A1C23] text-secondary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-lg border border-[#2D2E33]"
+              >
+                <UserCheck size={20} />
+                <span className="font-semibold">Profil Resimleri</span>
               </button>
               <button 
                 onClick={() => setIsBroadcasting(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-surface-container-highest text-primary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-md shadow-black/5"
+                className="flex items-center gap-2 px-6 py-4 bg-surface-container-highest text-primary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-md shadow-black/5"
               >
                 <MessageSquare size={20} />
                 <span className="font-semibold">Toplu Mesaj</span>
               </button>
               <button 
                 onClick={() => setIsAddingStudent(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-primary text-secondary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/10"
+                className="flex items-center gap-2 px-6 py-4 bg-primary text-secondary rounded-xl font-bold hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/10"
               >
                 <Plus size={20} />
                 <span className="font-semibold">Talebe Ekle</span>
               </button>
               <button 
                 onClick={() => setIsManagingAttendance(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
+                className="flex items-center gap-2 px-6 py-4 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
               >
                 <Clock size={20} />
                 <span className="font-semibold">Yoklama Yönetimi</span>
               </button>
               <button 
-                onClick={() => setSelectedClass(classes.find(c => c.status === 'ongoing') || classes.find(c => c.status === 'next') || classes[0])}
-              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
-            >
-              <FileText size={20} />
-              <span className="font-semibold">Ders Planını Aç</span>
-            </button>
-            <button 
-              onClick={() => onNavigate?.('portal')}
-              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95"
-            >
-              <Edit3 size={20} />
-              <span className="font-semibold">Not Girişi Yap</span>
-            </button>
-            <button 
-              onClick={() => {
-                setIsViewingReport(true);
-                generateAIReport();
-              }}
-              className="flex items-center gap-2 px-6 py-3 bg-black text-secondary border border-secondary rounded-xl shadow-sm hover:bg-secondary hover:text-black transition-all active:scale-95"
-            >
-              <Sparkles size={20} className="text-secondary" />
-              <span className="font-semibold">Hızlı Rapor Oluştur</span>
-            </button>
-          </div>
-        </div>
-      </section>
+                onClick={() => setIsPublishingExam(true)}
+                className="flex items-center gap-2 px-6 py-4 bg-accent text-white rounded-xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform active:scale-95 border-b-4 border-accent-dark"
+              >
+                <BookOpen size={24} />
+                <div className="text-left">
+                  <span className="block text-sm font-black uppercase tracking-wider">Test Yayınla</span>
+                  <span className="block text-[10px] opacity-70">PDF Kitapçığı Yükle</span>
+                </div>
+              </button>
+            </div>
 
-        {/* Muallim Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="info-card text-center">
-            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toplam Öğrenci</p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-secondary">66</span>
-              <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">+2</span>
+            {/* Muallim Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="info-card text-center border-b-4 border-secondary/20">
+            <p className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-2 opacity-70">Toplam Kayıtlı Talebe</p>
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-4xl font-black text-primary">{students.length}</span>
+              <div className="text-left leading-none">
+                <span className="block text-[10px] font-bold text-green-500 uppercase tracking-widest">+2 Yeni</span>
+                <span className="block text-[8px] text-[#888] font-bold uppercase tracking-widest mt-1">Bu Hafta</span>
+              </div>
             </div>
           </div>
-          <div className="info-card text-center">
-            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Genel Başarı Oranı</p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-secondary">%84.5</span>
-              <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">1.4</span>
+          <div className="info-card text-center border-b-4 border-secondary/20">
+            <p className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-2 opacity-70">Ortalama Başarı Skoru</p>
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-4xl font-black text-primary">%84</span>
+              <div className="text-left leading-none">
+                <span className="block text-[10px] font-bold text-secondary uppercase tracking-widest">Yüksek</span>
+                <span className="block text-[8px] text-[#888] font-bold uppercase tracking-widest mt-1">Genel Ort.</span>
+              </div>
             </div>
           </div>
-          <div className="info-card text-center">
-            <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yoklama Durumu</p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-secondary">%98</span>
-              <span className="text-xs font-bold text-primary bg-secondary/10 px-2 py-0.5 rounded-full">Tamam</span>
+          <div className="info-card text-center border-b-4 border-secondary/20">
+            <p className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-2 opacity-70">Günlük Katılım Oranı</p>
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-4xl font-black text-primary">%98</span>
+              <div className="text-left leading-none">
+                <span className="block text-[10px] font-bold text-green-500 uppercase tracking-widest">Mükemmel</span>
+                <span className="block text-[8px] text-[#888] font-bold uppercase tracking-widest mt-1">Bugün</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Sınıf Özeti & Hızlı Not Girişi */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <div className="info-card">
-            <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
-              <BarChart3 className="text-accent" size={24} />
-              Ders Bazlı Puan Dağılımı (9-A)
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-on-surface-variant">Matematik</span>
-                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-accent w-[80%]"></div>
+        {/* Öğrenci Güncel Durum Raporu (Main Dashboard Table) */}
+        <div className="bg-[#1A1C23] p-10 rounded-[2.5rem] border border-[#2D2E33] shadow-2xl overflow-hidden mb-12 relative group/report">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary/20 to-transparent opacity-50" />
+          
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-10">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-secondary/10 rounded-lg">
+                  <BarChart3 size={24} className="text-secondary" />
                 </div>
-                <span className="text-xs font-bold text-primary">%80</span>
+                <h3 className="text-3xl font-black text-white tracking-tight">Öğrenci Güncel Durum Raporu</h3>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-on-surface-variant">Fizik</span>
-                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-accent w-[60%]"></div>
+              <p className="text-[#888] text-xs font-bold uppercase tracking-[0.2em] ml-12">Kayıtlı tüm talebelerin akademik ve idari gelişim karnesi</p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex bg-[#0E1117] p-1.5 rounded-xl border border-white/5">
+                <button className="px-5 py-2 bg-secondary text-primary rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">Tümü</button>
+                <button className="px-5 py-2 text-white/40 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">9-A</button>
+                <button className="px-5 py-2 text-white/40 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">10-B</button>
+              </div>
+              
+              <button 
+                onClick={exportToExcel}
+                className="flex items-center gap-3 px-8 py-4 bg-primary text-secondary rounded-2xl font-black hover:scale-[1.02] transition-all active:scale-95 shadow-xl shadow-primary/30 border-b-4 border-primary-dark group/dl"
+              >
+                <FileText size={20} className="group-hover/dl:rotate-12 transition-transform" />
+                <div className="text-left flex flex-col leading-tight">
+                  <span className="text-[11px] uppercase tracking-widest">Excel Olarak Al</span>
+                  <span className="text-[9px] opacity-60 font-bold">DETAYLI VERİ ÇIKTISI</span>
                 </div>
-                <span className="text-xs font-bold text-primary">%60</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-on-surface-variant">Türkçe</span>
-                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-accent w-[95%]"></div>
-                </div>
-                <span className="text-xs font-bold text-primary">%95</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-on-surface-variant">Kimya</span>
-                <div className="w-2/3 h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-accent w-[70%]"></div>
-                </div>
-                <span className="text-xs font-bold text-primary">%70</span>
-              </div>
+              </button>
             </div>
           </div>
 
-          <div className="info-card">
-            <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
-              <Plus className="text-secondary" size={24} />
-              Hızlı Not Girişi
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-outline-variant/10">
-                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Talebe Adı</th>
-                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Numara</th>
-                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Matematik</th>
-                    <th className="py-3 text-xs font-black text-primary uppercase tracking-widest">Durum</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/5">
-                  {[
-                    { name: 'Kerem Yılmaz', no: 101, grade: 85, status: '✅ Onaylı' },
-                    { name: 'Zeynep Aksoy', no: 102, grade: 92, status: '✅ Onaylı' },
-                    { name: 'Elif Demir', no: 103, grade: 78, status: '⏳ Bekliyor' }
-                  ].map((row, i) => (
-                    <tr key={i} className="hover:bg-surface-container-low transition-colors group cursor-pointer">
-                      <td className="py-3 text-sm font-bold text-primary">{row.name}</td>
-                      <td className="py-3 text-xs font-medium text-on-surface-variant font-mono">{row.no}</td>
-                      <td className="py-3">
-                        <input 
-                          type="number" 
-                          defaultValue={row.grade} 
-                          className="w-16 bg-surface-container-high border-none rounded-lg py-1 px-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                        />
+          <div className="overflow-x-auto custom-scrollbar -mx-2">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#0E1117]/50">
+                  <th className="py-6 px-6 text-[10px] font-black text-secondary uppercase tracking-[0.2em] border-b border-white/5 rounded-tl-2xl">Talebe & Kimlik</th>
+                  <th className="py-6 px-6 text-[10px] font-black text-[#888] uppercase tracking-[0.2em] border-b border-white/5">No</th>
+                  <th className="py-6 px-6 text-[10px] font-black text-[#888] uppercase tracking-[0.2em] border-b border-white/5 text-center">Sınıf</th>
+                  <th className="py-6 px-6 text-[10px] font-black text-[#888] uppercase tracking-[0.2em] border-b border-white/5">Veli / İletişim</th>
+                  <th className="py-6 px-6 text-[10px] font-black text-[#888] uppercase tracking-[0.2em] border-b border-white/5 text-center">Başarı Oranı</th>
+                  <th className="py-6 px-6 text-[10px] font-black text-[#888] uppercase tracking-[0.2em] border-b border-white/5 text-right rounded-tr-2xl">Durum</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.03]">
+                {students.map((student) => {
+                  const sGrades = student.grades || [];
+                  const avg = sGrades.length > 0 
+                    ? Math.round(sGrades.reduce((acc, curr) => acc + curr.value, 0) / sGrades.length) 
+                    : 0;
+                  
+                  return (
+                    <tr key={student.id} className="hover:bg-white/[0.02] transition-all group/row">
+                      <td className="py-5 px-6 border-b border-white/[0.03]">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-full border-2 border-secondary/20 overflow-hidden bg-[#0E1117] ring-4 ring-transparent group-hover/row:ring-secondary/10 transition-all shadow-lg p-0.5">
+                            <img src={student.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.name}`} alt="" className="w-full h-full object-cover rounded-full" />
+                          </div>
+                          <div>
+                            <span className="block font-black text-lg text-white group-hover/row:text-secondary transition-colors leading-tight">{student.name}</span>
+                            <span className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{student.status === 'present' ? 'SİSTEMDE AKTİF' : 'BEKLEMEDE'}</span>
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-3 text-[10px] font-bold">{row.status}</td>
+                      <td className="py-5 px-6 border-b border-white/[0.03] font-mono text-xs text-[#888] font-bold">{student.number}</td>
+                      <td className="py-5 px-6 border-b border-white/[0.03] text-center">
+                        <span className="px-4 py-1.5 bg-[#0E1117] text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">{student.class}</span>
+                      </td>
+                      <td className="py-5 px-6 border-b border-white/[0.03]">
+                        <div className="text-white/60 font-bold text-xs">{student.parentName}</div>
+                        <div className="text-[10px] text-[#666] font-medium mt-0.5">Kayıtlı Veli Bilgisi</div>
+                      </td>
+                      <td className="py-5 px-6 border-b border-white/[0.03] text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`text-xl font-black ${avg >= 85 ? 'text-green-500' : avg >= 60 ? 'text-secondary' : 'text-error'}`}>
+                            {avg > 0 ? `%${avg}` : 'N/A'}
+                          </span>
+                          <div className="w-12 h-1 bg-white/5 rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${avg}%` }} className={`h-full ${avg >= 85 ? 'bg-green-500' : avg >= 60 ? 'bg-secondary' : 'bg-error'}`} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-5 px-6 border-b border-white/[0.03] text-right">
+                        <div className="flex items-center justify-end gap-4">
+                           <button 
+                            onClick={() => handleDeleteStudent(student.id)}
+                            className="p-3 text-error/20 hover:text-error hover:bg-error/10 rounded-2xl transition-all opacity-0 group-hover/row:opacity-100"
+                            title="Kaydı Tamamen Sil"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                          <div className="flex flex-col items-end">
+                            <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${student.status === 'present' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-white/5 text-[#888]'}`}>
+                              {student.status === 'present' ? 'Mevcut' : 'Yok'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-6 flex justify-end">
-                <button 
-                  onClick={() => onNavigate?.('portal')}
-                  className="text-xs font-black text-secondary tracking-widest uppercase hover:underline"
-                >
-                  Tüm Listeyi Gör
-                </button>
-              </div>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -923,6 +1311,256 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
           </motion.div>
         </div>
       </section>
+          </motion.div>
+        </AnimatePresence>
+      ) : activePanel === 'calendar' ? (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="calendar-panel"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-12"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* SOL TARAF: SINAVLARIN AKIŞ LİSTESİ */}
+              <div className="lg:col-span-8">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-secondary/10 rounded-lg">
+                    <Clock className="text-secondary" size={24} />
+                  </div>
+                  <h3 className="text-3xl font-black text-white tracking-tight">📋 Planlanan Sınavlar</h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  {calendarEvents.map(event => (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      key={event.id} 
+                      className="bg-[#1A1C23] border border-[#2D2E33] rounded-[2rem] p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-secondary/30 transition-all group"
+                    >
+                      <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 bg-[#0E1117] rounded-2xl flex flex-col items-center justify-center border border-white/5 group-hover:border-secondary/20 transition-all">
+                          <span className="text-[10px] font-black text-secondary tracking-widest leading-none mb-1">{event.tur.toUpperCase()}</span>
+                          <span className="text-xl font-black text-white">{new Date(event.tarih).getDate()}</span>
+                        </div>
+                        <div>
+                          <h4 className="text-2xl font-black text-white group-hover:text-secondary transition-colors mb-1">{event.etkinlik_adi}</h4>
+                          <div className="flex items-center gap-4">
+                            <span className="text-xs font-bold text-[#666] flex items-center gap-2">
+                              <Clock size={14} />
+                              {new Date(event.tarih).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => handleDeleteCalendarEvent(event.id)}
+                        className="p-4 bg-[#0E1117] text-white/20 hover:text-error hover:bg-error/5 rounded-2xl border border-white/5 transition-all"
+                      >
+                        <Trash2 size={24} />
+                      </button>
+                    </motion.div>
+                  ))}
+
+                  {calendarEvents.length === 0 && (
+                    <div className="bg-[#1A1C23] p-20 rounded-[3rem] border border-[#2D2E33] text-center">
+                      <Clock size={64} className="mx-auto text-white/5 mb-6" />
+                      <p className="text-xl font-bold text-white/40 uppercase tracking-widest">Planlanmış bir sınav bulunmuyor</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SAĞ TARAF: YALNIZCA ÖĞRETMENE AÇIK SINAV EKLEME PANELİ */}
+              <div className="lg:col-span-4">
+                <div className="bg-[#1A1C23] p-10 rounded-[2.5rem] border border-[#2D2E33] shadow-2xl sticky top-8">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-2 bg-secondary/10 rounded-lg">
+                      <Plus className="text-secondary" size={24} />
+                    </div>
+                    <h3 className="text-2xl font-black text-white tracking-tight">📌 Sınav Ekle</h3>
+                  </div>
+
+                  <form onSubmit={handleAddCalendarEvent} className="space-y-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-widest mb-3 opacity-70">Sınav Adı</label>
+                      <input 
+                        type="text"
+                        placeholder="Örn: TYT Deneme #14"
+                        value={newCalendarEvent.etkinlik_adi}
+                        onChange={(e) => setNewCalendarEvent(prev => ({ ...prev, etkinlik_adi: e.target.value }))}
+                        className="w-full px-5 py-4 bg-[#0E1117] rounded-xl border border-[#2D2E33] text-white font-bold text-sm outline-none focus:ring-2 focus:ring-secondary transition-all"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-widest mb-3 opacity-70">Tür</label>
+                      <select 
+                        value={newCalendarEvent.tur}
+                        onChange={(e) => setNewCalendarEvent(prev => ({ ...prev, tur: e.target.value as any }))}
+                        className="w-full px-5 py-4 bg-[#0E1117] rounded-xl border border-[#2D2E33] text-white font-bold text-sm outline-none focus:ring-2 focus:ring-secondary transition-all appearance-none"
+                      >
+                        {['Deneme', 'Okul', 'Yazılı', 'Performans', 'Sınav'].map(tur => (
+                          <option key={tur} value={tur}>{tur}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-widest mb-3 opacity-70">Uygulama Tarihi</label>
+                      <input 
+                        type="date"
+                        value={newCalendarEvent.tarih}
+                        onChange={(e) => setNewCalendarEvent(prev => ({ ...prev, tarih: e.target.value }))}
+                        className="w-full px-5 py-4 bg-[#0E1117] rounded-xl border border-[#2D2E33] text-white font-bold text-sm outline-none focus:ring-2 focus:ring-secondary transition-all"
+                        required
+                      />
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={isSavingCalendarEvent || !newCalendarEvent.etkinlik_adi}
+                      className="w-full py-5 bg-secondary text-primary font-black rounded-2xl shadow-xl shadow-secondary/10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-xs disabled:opacity-50"
+                    >
+                      {isSavingCalendarEvent ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                      🚀 TAKVİME İŞLE
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="exams-panel"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-12"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1">
+                <div className="bg-[#1A1C23] p-8 rounded-[2.5rem] border border-[#2D2E33] shadow-xl sticky top-24">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-secondary/10 rounded-lg">
+                      <Plus className="text-secondary" size={24} />
+                    </div>
+                    <h3 className="text-xl font-black text-white tracking-tight">Yeni PDF'li Test Yayınla</h3>
+                  </div>
+
+                  <form onSubmit={handlePublishExam} className="space-y-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Sınav / Test Adı</label>
+                      <input 
+                        type="text"
+                        value={newExam.sinav_adi}
+                        onChange={(e) => setNewExam(prev => ({ ...prev, sinav_adi: e.target.value }))}
+                        placeholder="Örn: Matematik Konu Testi"
+                        className="w-full px-5 py-4 bg-[#0E1117] rounded-2xl border border-[#2D2E33] focus:ring-2 focus:ring-secondary transition-all font-bold text-sm text-white placeholder:text-white/10 outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Ders Seçin</label>
+                      <select 
+                        value={newExam.ders}
+                        onChange={(e) => setNewExam(prev => ({ ...prev, ders: e.target.value }))}
+                        className="w-full px-5 py-4 bg-[#0E1117] rounded-2xl border border-[#2D2E33] focus:ring-2 focus:ring-secondary transition-all font-bold text-sm text-white appearance-none outline-none"
+                        required
+                      >
+                        <option value="Matematik">Matematik</option>
+                        <option value="Fizik">Fizik</option>
+                        <option value="Kimya">Kimya</option>
+                        <option value="Biyoloji">Biyoloji</option>
+                        <option value="Edebiyat">Edebiyat</option>
+                        <option value="Tarih">Tarih</option>
+                        <option value="Genel Deneme">Genel Deneme</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Toplam Soru</label>
+                      <input 
+                        type="number"
+                        value={newExam.toplam_soru}
+                        onChange={(e) => setNewExam(prev => ({ ...prev, toplam_soru: Number(e.target.value) }))}
+                        min="1"
+                        className="w-full px-5 py-4 bg-[#0E1117] rounded-2xl border border-[#2D2E33] focus:ring-2 focus:ring-secondary transition-all font-bold text-sm text-white outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Sınav PDF Dosyası</label>
+                      <input 
+                        type="file"
+                        accept="application/pdf"
+                        onChange={handlePDFFileChange}
+                        className="hidden"
+                        id="pdf-upload-sidebar"
+                      />
+                      <label 
+                        htmlFor="pdf-upload-sidebar"
+                        className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-[2rem] cursor-pointer transition-all group relative ${newExam.pdf_data ? 'border-secondary bg-secondary/5' : 'border-[#2D2E33] hover:bg-white/5'}`}
+                      >
+                        {newExam.pdf_data ? (
+                          <div className="text-center">
+                            <FileText size={32} className="text-secondary mx-auto mb-2" />
+                            <span className="text-[10px] font-black text-white block truncate max-w-[150px]">{newExam.pdf_name}</span>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <Plus size={32} className="text-secondary/40 mx-auto mb-1" />
+                            <span className="text-[10px] font-black text-[#888] uppercase tracking-widest">PDF Yükle</span>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={isSavingExam || !newExam.sinav_adi || !newExam.pdf_data}
+                      className="w-full py-5 bg-secondary text-primary font-black rounded-2xl shadow-xl shadow-secondary/10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-xs disabled:opacity-50"
+                    >
+                      {isSavingExam ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                      TESTİ YAYINLA
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-secondary/10 rounded-lg">
+                    <BookOpen className="text-secondary" size={24} />
+                  </div>
+                  <h3 className="text-3xl font-black text-white tracking-tight">Yayındaki Testler</h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  {exams.map(exam => (
+                    <ExamResultCard key={exam.id} exam={exam} />
+                  ))}
+                  {exams.length === 0 && (
+                    <div className="bg-[#1A1C23] p-20 rounded-[3rem] border border-[#2D2E33] text-center">
+                      <BookOpen size={64} className="mx-auto text-white/5 mb-6" />
+                      <p className="text-xl font-bold text-white/40 uppercase tracking-widest">Yayında test bulunmuyor</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       {/* Attendance Modal */}
       <AnimatePresence>
@@ -1650,98 +2288,224 @@ export default function TeacherDashboard({ announcements, classes, messages, stu
           </div>
         )}
       </AnimatePresence>
-      
-      {/* Announcement Management Modal */}
+            {/* Avatar Management Modal */}
       <AnimatePresence>
-        {isManagingAnnouncements && (
+        {isManagingAvatars && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsManagingAnnouncements(false)}
+              onClick={() => setIsManagingAvatars(false)}
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="relative w-full max-w-lg bg-[#0E1117] rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-[#2D2E33]"
             >
               <div className="p-8 pb-4">
                 <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h2 className="text-2xl font-black text-primary">Duyuru Yönetimi</h2>
-                    <p className="text-on-surface-variant text-xs font-bold uppercase tracking-widest">Sistem geneline duyuru yayınlayın</p>
+                    <h2 className="text-2xl font-black text-secondary">Öğrenci Profil Resmi Ayarları</h2>
+                    <p className="text-[#888] text-xs font-bold uppercase tracking-widest">Görsel kimlik yönetimi merkezi</p>
                   </div>
-                  <button onClick={() => setIsManagingAnnouncements(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                  <button onClick={() => setIsManagingAvatars(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
                     <X size={24} className="text-outline" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-8 space-y-8 custom-scrollbar pb-8">
-                {/* Form to add new announcement */}
-                <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10">
-                  <h3 className="text-sm font-black text-primary uppercase tracking-widest mb-4">Yeni Duyuru Yayınla</h3>
-                  <form onSubmit={handleAddAnnouncement} className="space-y-4">
-                    <div>
-                      <input 
-                        type="text"
-                        value={newAnnouncement.title}
-                        onChange={(e) => setNewAnnouncement({...newAnnouncement, title: e.target.value})}
-                        placeholder="Duyuru Başlığı"
-                        className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-bold text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <textarea 
-                        value={newAnnouncement.content}
-                        onChange={(e) => setNewAnnouncement({...newAnnouncement, content: e.target.value})}
-                        placeholder="Duyuru içeriği..."
-                        className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-secondary transition-all font-medium text-sm min-h-[100px]"
-                        required
-                      />
-                    </div>
-                    <button 
-                      type="submit"
-                      disabled={isSavingAnnouncement || !newAnnouncement.title || !newAnnouncement.content}
-                      className="w-full py-3 bg-primary text-secondary font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              <div className="flex-1 overflow-y-auto px-8 space-y-8 pb-8 custom-scrollbar">
+                <form onSubmit={handleUpdateAvatar} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1 opacity-70">Öğrenci Seçin</label>
+                    <select 
+                      value={avatarStudentId}
+                      onChange={(e) => {
+                        setAvatarStudentId(e.target.value);
+                        const student = students.find(s => s.id === e.target.value);
+                        if (student?.avatar) setAvatarPreview(student.avatar);
+                        else setAvatarPreview(null);
+                      }}
+                      className="w-full px-4 py-4 bg-[#1A1C23] rounded-xl border border-[#2D2E33] focus:ring-2 focus:ring-secondary transition-all font-bold text-sm text-white appearance-none"
+                      required
                     >
-                      {isSavingAnnouncement ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-                      HERKESE DUYUR
-                    </button>
-                  </form>
-                </div>
-
-                {/* List of existing announcements */}
-                <div>
-                  <h3 className="text-sm font-black text-primary uppercase tracking-widest mb-4">Mevcut Duyurular</h3>
-                  <div className="space-y-3">
-                    {announcements.length > 0 ? announcements.map((ann) => (
-                      <div key={ann.id} className="p-4 bg-surface-container rounded-xl border border-outline-variant/5 group">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-bold text-primary text-sm">{ann.title}</h4>
-                          <button 
-                            onClick={() => handleDeleteAnnouncement(ann.id)}
-                            className="text-error opacity-0 group-hover:opacity-100 p-1 hover:bg-error/10 rounded-lg transition-all"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                        <p className="text-xs text-on-surface-variant mb-2 line-clamp-3">{ann.content}</p>
-                        <span className="text-[10px] text-outline font-medium tracking-wider">{ann.date}</span>
-                      </div>
-                    )) : (
-                      <div className="text-center py-8 text-on-surface-variant/60">
-                        <Bell size={32} className="mx-auto mb-2 opacity-20" />
-                        <p className="text-xs font-medium">Henüz yayınlanmış bir duyuru bulunmuyor.</p>
-                      </div>
-                    )}
+                      <option value="" className="bg-[#1A1C23]">Öğrenci Listesini Aç...</option>
+                      {students.map(s => (
+                        <option key={s.id} value={s.id} className="bg-[#1A1C23]">{s.name} ({s.number})</option>
+                      ))}
+                    </select>
                   </div>
+
+                  <div className="flex flex-col items-center gap-8 p-8 bg-[#1A1C23] rounded-3xl border border-[#2D2E33] relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary/20 to-transparent" />
+                    
+                    <motion.div 
+                      className="relative w-40 h-40 rounded-full border-4 border-secondary overflow-hidden shadow-2xl shadow-secondary/20 bg-[#0E1117]"
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#888]">
+                          <Users size={48} className="opacity-20" />
+                        </div>
+                      )}
+                    </motion.div>
+                    
+                    <div className="w-full">
+                      <label className="flex flex-col items-center gap-3 px-4 py-8 bg-[#0E1117] text-secondary rounded-2xl font-bold cursor-pointer hover:bg-white/5 transition-all border-2 border-dashed border-[#2D2E33] group">
+                        <Edit3 size={28} className="group-hover:scale-110 transition-transform text-secondary" />
+                        <div className="text-center">
+                          <span className="block text-xs uppercase tracking-[0.2em] mb-1">Yeni Fotoğraf Seç</span>
+                          <span className="block text-[10px] text-[#888] font-medium tracking-normal italic">Format: PNG, JPG, JPEG</span>
+                        </div>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleAvatarFileChange} 
+                          className="hidden" 
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={isUpdatingAvatar || !avatarStudentId || !avatarPreview}
+                    className="w-full py-4 bg-secondary text-primary font-black rounded-xl shadow-xl shadow-secondary/10 hover:shadow-secondary/20 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {isUpdatingAvatar ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
+                    SİSTEME İŞLE VE GÜNCELLE
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Exam Publishing Modal */}
+      <AnimatePresence>
+        {isPublishingExam && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsPublishingExam(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-xl bg-[#0E1117] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border border-[#2D2E33]"
+            >
+              <div className="p-10 pb-4">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight">Yeni Test Yayınla</h2>
+                    <p className="text-[#888] text-xs font-bold uppercase tracking-[0.2em] mt-1">Sınıfa PDF sınav dökümanı dağıtın</p>
+                  </div>
+                  <button onClick={() => setIsPublishingExam(false)} className="p-3 hover:bg-white/5 rounded-2xl transition-colors">
+                    <X size={24} className="text-white/40" />
+                  </button>
                 </div>
               </div>
+
+              <form onSubmit={handlePublishExam} className="p-10 pt-0 space-y-8">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Sınav / Test Adı</label>
+                    <input 
+                      type="text"
+                      value={newExam.sinav_adi}
+                      onChange={(e) => setNewExam(prev => ({ ...prev, sinav_adi: e.target.value }))}
+                      placeholder="Örn: Matematik Konu Testi - Fonksiyonlar"
+                      className="w-full px-6 py-4 bg-[#1A1C23] rounded-2xl border border-[#2D2E33] focus:ring-2 focus:ring-secondary transition-all font-bold text-sm text-white placeholder:text-white/10 outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Ders Seçin</label>
+                      <div className="relative">
+                        <select 
+                          value={newExam.ders}
+                          onChange={(e) => setNewExam(prev => ({ ...prev, ders: e.target.value }))}
+                          className="w-full px-6 py-4 bg-[#1A1C23] rounded-2xl border border-[#2D2E33] focus:ring-2 focus:ring-secondary transition-all font-bold text-sm text-white appearance-none outline-none"
+                          required
+                        >
+                          <option value="Matematik">Matematik</option>
+                          <option value="Fizik">Fizik</option>
+                          <option value="Kimya">Kimya</option>
+                          <option value="Biyoloji">Biyoloji</option>
+                          <option value="Edebiyat">Edebiyat</option>
+                          <option value="Tarih">Tarih</option>
+                          <option value="Genel Deneme">Genel Deneme</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Toplam Soru</label>
+                      <input 
+                        type="number"
+                        value={newExam.toplam_soru}
+                        onChange={(e) => setNewExam(prev => ({ ...prev, toplam_soru: Number(e.target.value) }))}
+                        min="1"
+                        className="w-full px-6 py-4 bg-[#1A1C23] rounded-2xl border border-[#2D2E33] focus:ring-2 focus:ring-secondary transition-all font-bold text-sm text-white outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-3 ml-1 opacity-70">Sınav PDF Dosyası (Kitapçık/Optik)</label>
+                    <input 
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePDFFileChange}
+                      className="hidden"
+                      id="pdf-upload"
+                    />
+                    <label 
+                      htmlFor="pdf-upload"
+                      className={`flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-[2rem] cursor-pointer transition-all group overflow-hidden relative ${newExam.pdf_data ? 'border-secondary bg-secondary/5' : 'border-[#2D2E33] hover:bg-white/5'}`}
+                    >
+                      {newExam.pdf_data ? (
+                        <div className="text-center relative z-10">
+                          <div className="w-20 h-20 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-slow">
+                            <FileText size={40} className="text-secondary" />
+                          </div>
+                          <span className="text-sm font-black text-white block truncate max-w-[250px] mb-1">{newExam.pdf_name}</span>
+                          <span className="text-[10px] font-black text-secondary uppercase tracking-widest">PDF YÜKLENDİ - YAYINA HAZIR</span>
+                        </div>
+                      ) : (
+                        <div className="text-center relative z-10">
+                          <div className="w-20 h-20 bg-[#1A1C23] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                            <Plus size={40} className="text-secondary" />
+                          </div>
+                          <span className="text-xs font-black text-[#888] uppercase tracking-widest">Sınav PDF'ini Yükleyin</span>
+                          <span className="block text-[10px] text-[#444] font-bold mt-2 uppercase">MAKSİMUM 10MB</span>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={isSavingExam || !newExam.sinav_adi || !newExam.pdf_data}
+                  className="w-full py-6 bg-secondary text-primary font-black rounded-2xl shadow-2xl shadow-secondary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-4 uppercase tracking-[0.2em] text-sm disabled:opacity-50 disabled:grayscale"
+                >
+                  {isSavingExam ? <Loader2 size={24} className="animate-spin" /> : <Send size={24} />}
+                  TESTİ SINIFTA YAYINLA
+                </button>
+              </form>
             </motion.div>
           </div>
         )}

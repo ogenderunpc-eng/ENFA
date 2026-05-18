@@ -15,6 +15,7 @@ import ProfilePage from './pages/ProfilePage';
 import PortalPage from './pages/PortalPage';
 import KTSPage from './pages/KTSPage';
 import HomeworkPage from './pages/HomeworkPage';
+import TeacherSidebarExtra from './components/TeacherSidebarExtra';
 import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, where, or } from 'firebase/firestore';
@@ -63,21 +64,44 @@ export default function App() {
       if (user) {
         setUserEmail(user.email || '');
         
-        // Seed database on first run for developer
-        if (user.email === 'ogenderunpc@gmail.com') {
-          seedDatabase();
-          // Ensure they are in the yoneticiler and teachers collection
-          await setDoc(doc(db, 'yoneticiler', user.uid), {
+        // Seed database on first run for developer or default teacher
+        if (user.email === 'ogenderunpc@gmail.com' || user.email === 'ogretmen@example.com') {
+          seedDatabase(); // Only teacher/admin can seed
+          
+          if (user.email === 'ogenderunpc@gmail.com') {
+            // Ensure they are in the yoneticiler collection
+            await setDoc(doc(db, 'yoneticiler', user.uid), {
+              email: user.email,
+              role: 'admin',
+              name: 'OGE Admin',
+              olusturma_tarihi: new Date().toISOString()
+            }, { merge: true });
+          }
+          
+          if (user.email === 'ogenderunpc@gmail.com' || user.email === 'ogretmen@example.com') {
+            await setDoc(doc(db, 'teachers', user.uid), {
+              email: user.email,
+              role: 'teacher',
+              name: user.email === 'ogretmen@example.com' ? 'Öğretmen' : 'OGE Admin',
+              avatar: user.photoURL || null
+            }, { merge: true });
+          }
+        }
+
+        if (user.email === 'ogrenci@example.com') {
+          await setDoc(doc(db, 'students', user.uid), {
+            id: user.uid,
+            name: 'Demo Öğrenci',
+            number: '101',
+            class: '12-A',
             email: user.email,
-            role: 'admin',
-            name: 'OGE Admin',
-            olusturma_tarihi: new Date().toISOString()
-          }, { merge: true });
-          await setDoc(doc(db, 'teachers', user.uid), {
-            email: user.email,
-            role: 'teacher',
-            name: 'OGE Admin',
-            avatar: user.photoURL || null
+            parentEmail: user.email,
+            role: 'parent',
+            attendance: 100,
+            status: 'present',
+            grades: [],
+            ktsResults: [],
+            createdAt: new Date().toISOString()
           }, { merge: true });
         }
         
@@ -122,7 +146,13 @@ export default function App() {
     // Students/Parents should only list themselves or a teacher can list all
     const studentsQuery = role === 'teacher' 
       ? collection(db, 'students') 
-      : query(collection(db, 'students'), where('parentEmail', '==', email));
+      : query(
+          collection(db, 'students'), 
+          or(
+            where('parentEmail', '==', email),
+            where('id', '==', uid)
+          )
+        );
 
     const unsubStudents = onSnapshot(studentsQuery, (snapshot) => {
       setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
@@ -251,6 +281,7 @@ export default function App() {
       userId={auth.currentUser?.uid || ''}
       theme={theme}
       onToggleTheme={toggleTheme}
+      sidebarExtra={role === 'teacher' && activeTab === 'home' ? <TeacherSidebarExtra /> : undefined}
     >
       {renderContent()}
     </Layout>

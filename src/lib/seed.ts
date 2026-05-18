@@ -3,6 +3,7 @@ import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
 import { STUDENTS, CLASSES, MESSAGES } from '../constants';
 
 export async function seedDatabase() {
+  console.log('Starting database seed check...');
   try {
     const studentsSnap = await getDocs(collection(db, 'students'));
     if (studentsSnap.empty) {
@@ -64,26 +65,34 @@ export async function seedDatabase() {
     }
 
     // Ensure specific admin record exists for the developer
-    const adminEmail = 'ogenderunpc@gmail.com';
-    const adminsSnap = await getDocs(collection(db, 'yoneticiler'));
-    if (adminsSnap.empty) {
-      console.log('Creating initial admin record...');
+    const email = 'ogenderunpc@gmail.com';
+    try {
+      const adminsSnap = await getDocs(collection(db, 'yoneticiler'));
+      if (adminsSnap.empty) {
+        console.log('Creating initial admin record...');
+      }
+    } catch (e) {
+      console.warn('Could not check yoneticiler collection, skipping admin seed check:', e);
     }
     
-    const teachersSnap = await getDocs(collection(db, 'teachers'));
-    if (teachersSnap.empty) {
-      console.log('Seeding teachers...');
-      const teachers = [
-        { id: 'teacher_test', name: 'Test Öğretmeni', role: 'teacher', email: 'ogretmen@example.com', avatar: 'https://i.pravatar.cc/150?u=test_teacher' },
-        { id: 'teacher_1', name: 'Zeynep Kaya', role: 'teacher', email: 'zeynep@ogeacademy.com', avatar: 'https://i.pravatar.cc/150?u=zeynep' },
-        { id: 'teacher_2', name: 'Murat Aras', role: 'teacher', email: 'murat@ogeacademy.com', avatar: 'https://i.pravatar.cc/150?u=murat' }
-      ];
-      for (const teacher of teachers) {
-        await setDoc(doc(db, 'teachers', teacher.id), teacher);
+    try {
+      const teachersSnap = await getDocs(collection(db, 'teachers'));
+      if (teachersSnap.empty) {
+        console.log('Seeding teachers...');
+        const teachers = [
+          { id: 'teacher_test', name: 'Test Öğretmeni', role: 'teacher', email: 'ogretmen@example.com', avatar: 'https://i.pravatar.cc/150?u=test_teacher' },
+          { id: 'teacher_1', name: 'Zeynep Kaya', role: 'teacher', email: 'zeynep@ogeacademy.com', avatar: 'https://i.pravatar.cc/150?u=zeynep' },
+          { id: 'teacher_2', name: 'Murat Aras', role: 'teacher', email: 'murat@ogeacademy.com', avatar: 'https://i.pravatar.cc/150?u=murat' }
+        ];
+        for (const teacher of teachers) {
+          await setDoc(doc(db, 'teachers', teacher.id), teacher);
+        }
       }
+    } catch (e) {
+      console.warn('Could not seed teachers:', e);
     }
 
-    console.log('Database seeded successfully!');
+    console.log('Database seed check completed!');
   } catch (error) {
     console.error('Error seeding database:', error);
   }

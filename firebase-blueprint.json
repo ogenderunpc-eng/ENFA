@@ -123,23 +123,60 @@
       },
       "required": ["title", "content", "date", "teacherId"]
     },
-    "Attendance": {
-      "title": "Attendance",
-      "description": "Attendance records for a class session.",
+    "Exam": {
+      "title": "Exam",
+      "description": "Represents an exam with a PDF attachment.",
       "type": "object",
       "properties": {
-        "classId": { "type": "string" },
-        "date": { "type": "string" },
-        "records": { 
-          "type": "object",
-          "description": "Map of student IDs to their status (present, absent, late)"
-        },
+        "sinav_adi": { "type": "string" },
+        "ders": { "type": "string" },
+        "toplam_soru": { "type": "number" },
+        "tarih": { "type": "string" },
+        "pdf_data": { "type": "string", "description": "Base64 encoded PDF content" },
+        "pdf_name": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sinav_adi", "ders", "toplam_soru", "pdf_data", "teacherId"]
+    },
+    "ExamResult": {
+      "title": "ExamResult",
+      "description": "Represents a student's result on a specific exam.",
+      "type": "object",
+      "properties": {
+        "sinav_id": { "type": "string" },
+        "talebe_id": { "type": "string" },
+        "talebe_isim": { "type": "string" },
+        "dogru": { "type": "number" },
+        "yanlis": { "type": "number" },
+        "bos": { "type": "number" },
+        "net": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sinav_id", "talebe_isim", "dogru", "yanlis", "bos", "net"]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Represents an exam or event on the shared calendar.",
+      "type": "object",
+      "properties": {
+        "etkinlik_adi": { "type": "string" },
+        "tur": { "type": "string", "enum": ["Deneme", "Okul", "Yazılı", "Performans", "Sınav"] },
+        "tarih": { "type": "string", "format": "date" },
         "teacherId": { "type": "string" }
       },
-      "required": ["classId", "date", "records", "teacherId"]
+      "required": ["etkinlik_adi", "tur", "tarih"]
     }
   },
   "firestore": {
+    "/talebe_sonuclari/{resultId}": {
+      "schema": "ExamResult",
+      "description": "Collection of student results for exams."
+    },
+    "/sinavlar/{examId}": {
+      "schema": "Exam",
+      "description": "Collection of exams with PDF booklets."
+    },
     "/attendance/{attendanceId}": {
       "schema": "Attendance",
       "description": "Daily attendance logs."
@@ -175,6 +212,10 @@
     "/yoneticiler/{adminId}": {
       "schema": "Message",
       "description": "Admin users collection."
+    },
+    "/takvim_etkinlikleri/{eventId}": {
+      "schema": "CalendarEvent",
+      "description": "Shared exam calendar events."
     }
   }
 }

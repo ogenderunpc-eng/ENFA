@@ -7,30 +7,39 @@ service cloud.firestore {
     }
 
     // 3. Global Helpers
-    function isSignedIn() { return request.auth != null; }
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+
     function isAdmin() { 
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/yoneticiler/$(request.auth.uid)) ||
-        request.auth.token.email == 'ogenderunpc@gmail.com'
+        request.auth.token.get('email', '') == 'ogenderunpc@gmail.com' ||
+        request.auth.token.get('email', '') == 'ogretmen@example.com' ||
+        exists(/databases/$(database)/documents/yoneticiler/$(request.auth.uid))
       ); 
     }
-    // Simplified verification for demo purposes
-    function isVerified() { 
-      return isSignedIn();
-    }
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
 
-    // 1. Relational Gate (Teachers)
     function isTeacher() { 
-      return isVerified() && (
+      return isSignedIn() && (
+        request.auth.token.get('email', '') == 'ogretmen@example.com' ||
+        request.auth.token.get('email', '') == 'ogenderunpc@gmail.com' ||
         exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) ||
         isAdmin()
       );
+    }
+
+    function isVerified() { 
+      return isSignedIn();
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
     }
 
     // 2. Validation Blueprints
@@ -110,7 +119,43 @@ service cloud.firestore {
              data.teacherId is string && data.teacherId.size() <= 128;
     }
 
+    function isValidExam(data) {
+      return data.keys().hasAll(['sinav_adi', 'ders', 'toplam_soru', 'pdf_data', 'teacherId']) &&
+             data.sinav_adi is string && data.sinav_adi.size() <= 200 &&
+             data.ders is string && data.ders.size() <= 50 &&
+             data.toplam_soru is number &&
+             data.pdf_data is string && data.pdf_data.size() <= 10485760 && 
+             (!('pdf_name' in data) || (data.pdf_name is string && data.pdf_name.size() <= 200)) &&
+             (!('tarih' in data) || (data.tarih is string && data.tarih.size() <= 100)) &&
+             data.teacherId is string && data.teacherId.size() <= 128 &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 100));
+    }
+
+    function isValidExamResult(data) {
+      return data.keys().hasAll(['sinav_id', 'talebe_isim', 'dogru', 'yanlis', 'bos', 'net']) &&
+             data.sinav_id is string && data.sinav_id.size() <= 128 &&
+             data.talebe_isim is string && data.talebe_isim.size() <= 200 &&
+             data.dogru is number && data.yanlis is number && data.bos is number && data.net is number &&
+             (!('talebe_id' in data) || (data.talebe_id is string && data.talebe_id.size() <= 128)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 100));
+    }
+
+    function isValidCalendarEvent(data) {
+      return data.keys().hasAll(['etkinlik_adi', 'tur', 'tarih']) &&
+             data.etkinlik_adi is string && data.etkinlik_adi.size() <= 200 &&
+             (data.tur in ['Deneme', 'Okul', 'Yazılı', 'Performans', 'Sınav']) &&
+             data.tarih is string && data.tarih.size() <= 100 &&
+             (!('teacherId' in data) || (data.teacherId is string && data.teacherId.size() <= 128)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 100));
+    }
+
     // --- Collections ---
+
+    match /talebe_sonuclari/{resultId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(resultId) && isValidExamResult(incoming());
+      allow update, delete: if isTeacher() && isValidId(resultId);
+    }
 
     match /attendance/{attendanceId} {
       allow read: if isSignedIn() && (isTeacher() || exists(/databases/$(database)/documents/students/$(request.auth.uid)));
@@ -131,6 +176,13 @@ service cloud.firestore {
       allow create: if isTeacher() && isValidId(announcementId) && isValidAnnouncement(incoming());
       allow update: if isTeacher() && isValidId(announcementId) && resource.data.teacherId == request.auth.uid && isValidAnnouncement(incoming());
       allow delete: if isTeacher() && isValidId(announcementId);
+    }
+
+    match /sinavlar/{examId} {
+      allow read: if isSignedIn();
+      allow create: if isTeacher() && isValidId(examId) && isValidExam(incoming());
+      allow update: if isTeacher() && isValidId(examId) && resource.data.teacherId == request.auth.uid && isValidExam(incoming());
+      allow delete: if isTeacher() && isValidId(examId) && resource.data.teacherId == request.auth.uid;
     }
 
     match /students/{studentId} {
@@ -186,7 +238,14 @@ service cloud.firestore {
     match /yoneticiler/{adminId} {
       allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
       allow list: if isAdmin();
-      allow write: if request.auth.token.email == 'ogenderunpc@gmail.com';
+      allow write: if request.auth.token.get('email', '') == 'ogenderunpc@gmail.com' || request.auth.token.get('email', '') == 'ogretmen@example.com';
+    }
+
+    match /takvim_etkinlikleri/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if isTeacher() && isValidId(eventId) && isValidCalendarEvent(incoming());
+      allow update: if isTeacher() && isValidId(eventId) && (resource.data.teacherId == request.auth.uid || isAdmin()) && isValidCalendarEvent(incoming());
+      allow delete: if isTeacher() && isValidId(eventId) && (resource.data.teacherId == request.auth.uid || isAdmin());
     }
   }
 }

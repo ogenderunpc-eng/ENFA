@@ -109,3 +109,35 @@ export interface Announcement {
   date: string;
   teacherId: string;
 }
+
+export interface Exam {
+  id: string;
+  sinav_adi: string;
+  ders: string;
+  toplam_soru: number;
+  tarih: string;
+  pdf_data: string;
+  pdf_name: string;
+  teacherId: string;
+  createdAt: string;
+}
+
+export interface ExamResult {
+  id: string;
+  sinav_id: string;
+  talebe_id: string;
+  talebe_isim: string;
+  dogru: number;
+  yanlis: number;
+  bos: number;
+  net: number;
+  createdAt: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  etkinlik_adi: string;
+  tur: 'Deneme' | 'Okul' | 'Yazılı' | 'Performans' | 'Sınav';
+  tarih: string;
+  teacherId?: string;
+}

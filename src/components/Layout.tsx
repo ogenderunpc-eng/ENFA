@@ -15,6 +15,7 @@ interface LayoutProps {
   userId: string;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
+  sidebarExtra?: React.ReactNode;
 }
 
 export default function Layout({ 
@@ -26,7 +27,8 @@ export default function Layout({
   userAvatar, 
   userId,
   theme = 'light',
-  onToggleTheme
+  onToggleTheme,
+  sidebarExtra
 }: LayoutProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
@@ -75,7 +77,7 @@ export default function Layout({
 
           <div className="h-px bg-white/5 mb-8" />
           
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -92,6 +94,12 @@ export default function Layout({
                 </button>
               );
             })}
+            
+            {sidebarExtra && (
+              <div className="mt-8 pt-6 border-t border-white/5 pb-4">
+                {sidebarExtra}
+              </div>
+            )}
           </nav>
 
           <div className="mt-auto pt-6 border-t border-white/5 h-auto">
